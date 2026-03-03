@@ -1,0 +1,17 @@
+{
+  "name": "litedbmodel-gen-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "embedoc:build": "embedoc build",
+    "embedoc:watch": "embedoc watch",
+    "embedoc:generate": "embedoc generate --all"
+  },
+  "devDependencies": {
+    "litedbmodel": "*",
+    "litedbmodel-gen": "file:..",
+    "embedoc": "^0.11.0",
+    "typescript": "^5.3.0",
+    "reflect-metadata": "^0.2.2"
+  }
+}

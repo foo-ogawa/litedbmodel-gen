@@ -1,0 +1,15 @@
+version: "1.0"
+
+targets:
+  - pattern: "./models/**/*.ts"
+    comment_style: block
+
+datasources:
+  schema:
+    type: sql_schema
+    path: "./db/schema.sql"
+    database: PostgreSQL
+    generators:
+      - output_path: "./models/{model_class}.ts"
+        template: model.hbs
+        overwrite: false

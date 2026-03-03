@@ -1,0 +1,10 @@
+import { DBModel, model, column } from 'litedbmodel';
+
+@model('{{table_name}}')
+class {{model_class}}Model extends DBModel {
+  /*@embedoc:litedbmodel_columns table="{{table_name}}"*/
+  /*@embedoc:end*/
+}
+
+export const {{model_class}} = {{model_class}}Model.asModel();
+export type {{model_class}} = InstanceType<typeof {{model_class}}>;
