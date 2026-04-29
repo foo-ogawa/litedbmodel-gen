@@ -166,6 +166,8 @@ If your datasource is not named `schema`, specify it:
 
 ## CLI
 
+**[📖 CLI Reference](./docs/cli-reference.md)** | **[📄 CLI Contract](./cli-contract.yaml)**
+
 ```bash
 # Initialize litedbmodel-gen in an embedoc project
 npx litedbmodel-gen init [config-path]

@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=./node_modules/cli-contracts/schemas/cli-contract.schema.json
+cliContracts: 0.1.0
+
+info:
+  title: litedbmodel-gen CLI
+  version: 0.1.2
+  description: >-
+    embedoc-based model code generator for litedbmodel.
+    Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates
+    TypeScript column definitions that stay in sync with your schema.
+  license:
+    name: MIT
+  contact:
+    name: foo-ogawa
+    url: https://github.com/foo-ogawa/litedbmodel.ts
+
+commandSets:
+  litedbmodel-gen:
+    summary: embedoc-based model code generator for litedbmodel.
+    executable: litedbmodel-gen
+
+    globalOptions:
+      - name: version
+        aliases: [V]
+        description: Print version and exit.
+        schema:
+          type: boolean
+
+      - name: help
+        aliases: [h]
+        description: Show help and exit.
+        schema:
+          type: boolean
+
+    commands:
+      # ── init ────────────────────────────────────────────
+      init:
+        summary: Set up litedbmodel-gen in an embedoc project.
+        description: >-
+          Registers the sql_schema datasource, litedbmodel_columns renderer,
+          and model.hbs template into an existing embedoc project.
+          Copies the starter Handlebars template, updates
+          .embedoc/renderers/index.ts and .embedoc/datasources/index.ts,
+          and adds a schema datasource entry to embedoc.config.yaml.
+        usage:
+          - litedbmodel-gen init
+          - litedbmodel-gen init path/to/embedoc.config.yaml
+
+        arguments:
+          - name: config
+            index: 0
+            required: false
+            description: >-
+              Path to embedoc.config.yaml.
+              Defaults to embedoc.config.yaml in the current directory.
+            schema:
+              type: string
+              default: embedoc.config.yaml
+            file:
+              mode: read
+              exists: true
+              mediaType: application/yaml
+              encoding: utf-8
+
+        exits:
+          '0':
+            description: >-
+              litedbmodel-gen set up successfully.
+              Template copied, renderers/datasources registered,
+              and embedoc config updated.
+            stdout:
+              format: text
+            files:
+              - path: .embedoc/templates/model.hbs
+                required: false
+                mediaType: text/x-handlebars-template
+                encoding: utf-8
+                description: Starter Handlebars template for model files (skipped if already exists).
+
+          '1':
+            description: >-
+              Setup failed. The embedoc config file was not found
+              or a file operation failed.
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects:
+            - file_write
+          recommendedBeforeUse:
+            - Run "npx embedoc init" first to create embedoc.config.yaml.
