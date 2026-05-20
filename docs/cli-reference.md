@@ -2,7 +2,7 @@
 
 embedoc-based model code generator for litedbmodel. Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates TypeScript column definitions that stay in sync with your schema.
 
-**Version:** 0.1.2
+**Version:** 0.2.0
 
 ## Table of Contents
 
@@ -60,12 +60,12 @@ litedbmodel-gen init path/to/embedoc.config.yaml
 
 ```yaml
 x-agent: 
-  riskLevel: low
-  requiresConfirmation: false
+  risk_level: low
+  requires_confirmation: false
   idempotent: true
-  sideEffects: 
+  side_effects: 
     - file_write
-  recommendedBeforeUse: 
+  recommended_before_use: 
     - Run "npx embedoc init" first to create embedoc.config.yaml.
 ```
 
