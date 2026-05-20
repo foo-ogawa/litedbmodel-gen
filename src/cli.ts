@@ -1,8 +1,12 @@
-import { Command } from 'commander';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import yaml from 'js-yaml';
+import { createProgram, type CommandHandlers } from './generated/program.js';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,18 +38,9 @@ function resolveEmbedocDirs(configPath: string): EmbedocDirs {
   return { renderersDir, datasourcesDir, templatesDir };
 }
 
-const program = new Command();
-
-program
-  .name('litedbmodel-gen')
-  .description('embedoc-based model code generator for litedbmodel')
-  .version('0.1.0');
-
-program
-  .command('init')
-  .description('Set up litedbmodel-gen in an embedoc project')
-  .argument('[config]', 'path to embedoc.config.yaml', 'embedoc.config.yaml')
-  .action((configPath: string) => {
+const handlers: CommandHandlers = {
+  init: async (config) => {
+    const configPath = config ?? 'embedoc.config.yaml';
     const absConfigPath = resolve(configPath);
     if (!existsSync(absConfigPath)) {
       console.error(`Error: ${configPath} not found. Run "npx embedoc init" first.`);
@@ -65,7 +60,8 @@ program
     console.log('  1. Edit embedoc.config.yaml — set path/database in the schema datasource');
     console.log('  2. npx embedoc generate --datasource schema  (create model files)');
     console.log('  3. npx embedoc build                         (fill in column definitions)');
-  });
+  },
+};
 
 function copyTemplate(templatesDir: string): void {
   mkdirSync(templatesDir, { recursive: true });
@@ -217,4 +213,4 @@ function updateConfig(configPath: string): void {
   console.log('  update  embedoc.config.yaml');
 }
 
-program.parse();
+createProgram(handlers, pkg.version).parse();
