@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { execSync } from 'child_process';
 import { writeFileSync, readFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 
-const TMP_DIR = join(import.meta.dirname!, '__tmp_cli_test__');
+const TMP_DIR = join(tmpdir(), 'ldbmgen-cli-test');
 const CLI_PATH = join(import.meta.dirname!, '..', 'dist', 'cli.js');
 
 function setupProject() {
@@ -123,7 +124,7 @@ describe('litedbmodel-gen init', () => {
 });
 
 describe('litedbmodel-gen init with custom dirs', () => {
-  const CUSTOM_DIR = join(import.meta.dirname!, '__tmp_cli_custom_test__');
+  const CUSTOM_DIR = join(tmpdir(), 'ldbmgen-cli-custom-test');
 
   beforeEach(() => {
     rmSync(CUSTOM_DIR, { recursive: true, force: true });

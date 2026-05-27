@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { sqlSchema } from '../src/datasource';
 
-const TMP_DIR = join(import.meta.dirname!, '__tmp_datasource_test__');
+const TMP_DIR = join(tmpdir(), 'ldbmgen-datasource-test');
 
 beforeAll(() => {
   mkdirSync(TMP_DIR, { recursive: true });
