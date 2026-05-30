@@ -1,0 +1,6 @@
+dsl: ./litedbmodel-gen-dsl.yaml
+generated_dir: ../src/generated/dsl
+
+recovery:
+  max_follow_ups: 3
+  max_retries: 1

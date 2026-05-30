@@ -29,3 +29,63 @@ export async function litedbmodelGenInit(
     };
   }
 }
+
+export async function litedbmodelGenAudit(
+  executable: string,
+  args: import("./types.js").AuditArgs,
+  options?: Partial<import("./types.js").AuditOptions>,
+): Promise<ExecResult> {
+  const cmdArgs: string[] = ["audit"];
+  if (args.target !== undefined) cmdArgs.push(String(args.target));
+  if (options) {
+    if (options.adapter !== undefined) cmdArgs.push("--adapter", String(options.adapter));
+    if (options.model !== undefined) cmdArgs.push("--model", String(options.model));
+    if (options.dryRun) cmdArgs.push("--dry-run");
+    if (options.failOn !== undefined) cmdArgs.push("--fail-on", String(options.failOn));
+    if (options.output !== undefined) cmdArgs.push("--output", String(options.output));
+    if (options.reportFormat !== undefined) cmdArgs.push("--report-format", String(options.reportFormat));
+  }
+
+  try {
+    const result = await execFileAsync(executable, cmdArgs);
+    return { exitCode: 0, stdout: result.stdout, stderr: result.stderr };
+  } catch (err: unknown) {
+    const e = err as { code?: number; stdout?: string; stderr?: string };
+    return {
+      exitCode: typeof e.code === 'number' ? e.code : 1,
+      stdout: e.stdout ?? '',
+      stderr: e.stderr ?? '',
+    };
+  }
+}
+
+export async function litedbmodelGenImplement(
+  executable: string,
+  args: import("./types.js").ImplementArgs,
+  options?: Partial<import("./types.js").ImplementOptions>,
+): Promise<ExecResult> {
+  const cmdArgs: string[] = ["implement"];
+  if (args.description !== undefined) cmdArgs.push(String(args.description));
+  if (options) {
+    if (options.target !== undefined) cmdArgs.push("--target", String(options.target));
+    if (options.models !== undefined) cmdArgs.push("--models", String(options.models));
+    if (options.adapter !== undefined) cmdArgs.push("--adapter", String(options.adapter));
+    if (options.model !== undefined) cmdArgs.push("--model", String(options.model));
+    if (options.dryRun) cmdArgs.push("--dry-run");
+    if (options.failOn !== undefined) cmdArgs.push("--fail-on", String(options.failOn));
+    if (options.output !== undefined) cmdArgs.push("--output", String(options.output));
+    if (options.reportFormat !== undefined) cmdArgs.push("--report-format", String(options.reportFormat));
+  }
+
+  try {
+    const result = await execFileAsync(executable, cmdArgs);
+    return { exitCode: 0, stdout: result.stdout, stderr: result.stderr };
+  } catch (err: unknown) {
+    const e = err as { code?: number; stdout?: string; stderr?: string };
+    return {
+      exitCode: typeof e.code === 'number' ? e.code : 1,
+      stdout: e.stdout ?? '',
+      stderr: e.stderr ?? '',
+    };
+  }
+}

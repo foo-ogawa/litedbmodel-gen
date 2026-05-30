@@ -3,6 +3,8 @@ import { Command } from "commander";
 
 export interface CommandHandlers {
   init: (config: string | undefined, options: Record<string, never>, parentOpts: Record<string, unknown>) => Promise<void>;
+  audit: (target: string | undefined, options: { adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
+  implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
 }
 
 export function createProgram(
@@ -22,6 +24,48 @@ export function createProgram(
     .argument("[config]", "Path to embedoc.config.yaml. Defaults to embedoc.config.yaml in the current directory.")
     .action(async (config, opts, cmd) => {
       await handlers.init(config, {}, cmd.optsWithGlobals());
+    });
+
+  program
+    .command("audit")
+    .description("Audit litedbmodel usage code for common anti-patterns.")
+    .argument("[target]", "File or directory path to audit. Defaults to the current working directory.")
+    .option("--adapter <value>", "LLM adapter to use for the audit.", "mock")
+    .option("--model <value>", "Model name override for the selected adapter.")
+    .option("--dry-run", "Output the constructed prompt without calling the LLM.", false)
+    .option("--fail-on <value>", "Minimum finding severity that causes exit code 10. Findings below this threshold are still reported.", "error")
+    .option("-o, --output <value>", "Write the report to a file instead of stdout.")
+    .option("--report-format <value>", "Output format for the audit report.", "json")
+    .option("--show-prompt", "Output the constructed prompt without calling the LLM API.", false)
+    .action(async (target, opts, cmd) => {
+      if (opts.showPrompt) {
+        const prompt = await handlers.audit(target, opts, cmd.optsWithGlobals());
+        if (typeof prompt === "string") process.stdout.write(prompt + "\n");
+        return;
+      }
+      await handlers.audit(target, opts, cmd.optsWithGlobals());
+    });
+
+  program
+    .command("implement")
+    .description("Implement a feature using litedbmodel best practices.")
+    .argument("<description>", "Natural-language description of the feature to implement. Should specify the function name, target file, and business logic.")
+    .option("-t, --target <value>", "Target source file(s) to create or edit. The agent reads these files to understand existing code and writes the implementation to them.")
+    .option("--models <value>", "Glob pattern for model definition files. The agent reads these to understand available models, columns, and relations.", "models/**/*.ts")
+    .option("--adapter <value>", "LLM adapter to use for code generation.", "mock")
+    .option("--model <value>", "Model name override for the selected adapter.")
+    .option("--dry-run", "Output the constructed prompt without calling the LLM.", false)
+    .option("--fail-on <value>", "Minimum finding severity that causes exit code 10. Design concerns (info/warning) are still reported at exit 0.", "error")
+    .option("-o, --output <value>", "Write the report to a file instead of stdout.")
+    .option("--report-format <value>", "Output format for the implementation report.", "json")
+    .option("--show-prompt", "Output the constructed prompt without calling the LLM API.", false)
+    .action(async (description, opts, cmd) => {
+      if (opts.showPrompt) {
+        const prompt = await handlers.implement(description, opts, cmd.optsWithGlobals());
+        if (typeof prompt === "string") process.stdout.write(prompt + "\n");
+        return;
+      }
+      await handlers.implement(description, opts, cmd.optsWithGlobals());
     });
 
   return program;

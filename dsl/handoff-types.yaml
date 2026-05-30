@@ -1,0 +1,258 @@
+# ── Invocation handoffs ───────────────────────────────────────────────────────
+
+litedbmodel-audit-request:
+  version: 1
+  description: >-
+    Invocation handoff carrying the audit context passed to the
+    litedbmodel-auditor agent. The userRequest field contains the
+    structured prompt built by the context-builder (target path header,
+    source code, and per-pattern instructions).
+  schema:
+    type: object
+    required: [userRequest]
+    properties:
+      userRequest:
+        type: string
+        description: >-
+          Full audit prompt including target path, source code, and
+          anti-pattern inspection instructions. Capped at 16 KB.
+
+litedbmodel-implement-request:
+  version: 1
+  description: >-
+    Invocation handoff carrying the implementation context passed to the
+    litedbmodel-implementer agent. The userRequest field contains the
+    structured prompt built by the context-builder (feature description,
+    model glob, target file path, and instructions to use file tools).
+  schema:
+    type: object
+    required: [userRequest]
+    properties:
+      userRequest:
+        type: string
+        description: >-
+          Full implementation prompt including feature description, model
+          glob pattern, target file path, and instructions to read models
+          and write implementation using file tools. Capped at 16 KB.
+
+# ── Result handoffs ───────────────────────────────────────────────────────────
+
+litedbmodel-audit-result:
+  version: 1
+  description: >-
+    Structured audit result returned by the litedbmodel-auditor agent.
+    Conforms to the AgentAuditResult base shape defined in
+    cli-contract.yaml#/components/schemas/AgentAuditResult.
+    Findings use litedbmodel-specific category vocabulary:
+    LOOP_CREATE, DELETE_REINSERT, MISSING_IDEMPOTENCY, AGGREGATE_SKIP,
+    OVER_DELETE, MISSING_LOCK, UNIQUE_MISSING, N_PLUS_ONE.
+  schema:
+    # SSoT: cli-contract.yaml#/components/schemas/AgentAuditResult
+    type: object
+    required: [summary, riskLevel, findings]
+    properties:
+      summary:
+        type: string
+        description: One-paragraph summary of the audit result.
+      riskLevel:
+        type: string
+        enum: [low, medium, high, critical]
+        description: Overall risk level reflecting the highest-severity finding.
+      findings:
+        type: array
+        items:
+          # SSoT: cli-contract.yaml#/components/schemas/AgentFinding
+          type: object
+          required: [severity, category, message]
+          properties:
+            id:
+              type: string
+            severity:
+              type: string
+              enum: [info, warning, error, critical]
+            category:
+              type: string
+              description: >-
+                One of: LOOP_CREATE | DELETE_REINSERT | MISSING_IDEMPOTENCY |
+                AGGREGATE_SKIP | OVER_DELETE | MISSING_LOCK | UNIQUE_MISSING |
+                N_PLUS_ONE
+            target:
+              type: string
+              description: Class name or function where the issue occurs.
+            location:
+              type: string
+              description: File path and optional line number.
+            message:
+              type: string
+            recommendation:
+              type: string
+              description: >-
+                Actionable fix referencing the correct litedbmodel API method.
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+            evidence:
+              type: array
+              items:
+                # SSoT: cli-contract.yaml#/components/schemas/AgentEvidence
+                type: object
+                required: [type, content]
+                properties:
+                  type: { type: string }
+                  content: { type: string }
+                  source: { type: string }
+            details:
+              type: object
+              description: Arbitrary additional structured detail.
+      recommendedActions:
+        type: array
+        items:
+          # SSoT: cli-contract.yaml#/components/schemas/AgentRecommendedAction
+          type: object
+          required: [kind, title]
+          properties:
+            kind:
+              type: string
+              enum: [run_command, edit_file, review, confirm, block, ignore]
+            title:
+              type: string
+            command:
+              type: string
+            target:
+              type: string
+            rationale:
+              type: string
+      metadata:
+        type: object
+        properties:
+          tool:
+            type: string
+          command:
+            type: string
+          version:
+            type: string
+          generatedAt:
+            type: string
+          adapter:
+            type: string
+          model:
+            type: string
+
+litedbmodel-implement-result:
+  version: 1
+  description: >-
+    Structured implementation report returned by the litedbmodel-implementer
+    agent after writing files directly. Extends the AgentAuditResult base
+    shape with changedFiles (what was created/modified) and optional
+    dependency/note fields. Findings contain design observations
+    (e.g. UNIQUE_MISSING, missing transaction wrapper).
+  schema:
+    # SSoT: cli-contract.yaml#/components/schemas/LitedbmodelImplementResult
+    type: object
+    required: [summary, riskLevel, findings, changedFiles]
+    properties:
+      summary:
+        type: string
+        description: One-paragraph summary of what was implemented.
+      riskLevel:
+        type: string
+        enum: [low, medium, high, critical]
+        description: Overall risk level of the implementation.
+      findings:
+        type: array
+        description: Design observations and caveats about the implementation.
+        items:
+          # SSoT: cli-contract.yaml#/components/schemas/AgentFinding
+          type: object
+          required: [severity, category, message]
+          properties:
+            id:
+              type: string
+            severity:
+              type: string
+              enum: [info, warning, error, critical]
+            category:
+              type: string
+            target:
+              type: string
+            location:
+              type: string
+            message:
+              type: string
+            recommendation:
+              type: string
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+            evidence:
+              type: array
+              items:
+                # SSoT: cli-contract.yaml#/components/schemas/AgentEvidence
+                type: object
+                required: [type, content]
+                properties:
+                  type: { type: string }
+                  content: { type: string }
+                  source: { type: string }
+            details:
+              type: object
+              description: Arbitrary additional structured detail.
+      recommendedActions:
+        type: array
+        items:
+          # SSoT: cli-contract.yaml#/components/schemas/AgentRecommendedAction
+          type: object
+          required: [kind, title]
+          properties:
+            kind:
+              type: string
+              enum: [run_command, edit_file, review, confirm, block, ignore]
+            title:
+              type: string
+            command:
+              type: string
+            target:
+              type: string
+            rationale:
+              type: string
+      changedFiles:
+        type: array
+        description: Files that the agent created or modified directly.
+        items:
+          # SSoT: cli-contract.yaml#/components/schemas/FileChange
+          type: object
+          required: [path, action]
+          properties:
+            path:
+              type: string
+              description: Relative path of the created/modified file.
+            action:
+              type: string
+              enum: [created, updated]
+            rationale:
+              type: string
+      dependencies:
+        type: array
+        description: npm packages required but not yet in the project.
+        items:
+          type: string
+      notes:
+        type: string
+        description: Additional integration instructions.
+      metadata:
+        type: object
+        properties:
+          tool:
+            type: string
+          command:
+            type: string
+          version:
+            type: string
+          generatedAt:
+            type: string
+          adapter:
+            type: string
+          model:
+            type: string

@@ -1,0 +1,55 @@
+audit-litedbmodel-usage:
+  description: >-
+    Audit TypeScript source files that import or use litedbmodel model classes.
+    Detect the eight canonical anti-patterns (LOOP_CREATE, DELETE_REINSERT,
+    MISSING_IDEMPOTENCY, AGGREGATE_SKIP, OVER_DELETE, MISSING_LOCK,
+    UNIQUE_MISSING, N_PLUS_ONE) and return structured findings with severity
+    ratings and remediation guidance referencing the correct litedbmodel API.
+  target_agent: litedbmodel-auditor
+  allowed_from_agents:
+    - litedbmodel-auditor
+  workflow: audit-workflow
+  input_artifacts: []
+  invocation_handoff: litedbmodel-audit-request
+  result_handoff: litedbmodel-audit-result
+  responsibilities:
+    - Parse the provided source code for litedbmodel model import sites and
+      all subsequent usages.
+    - Classify each usage occurrence against the eight anti-pattern categories.
+    - Return findings conforming to the litedbmodel-audit-result schema.
+  completion_criteria:
+    - All litedbmodel usage sites in the provided code have been inspected.
+    - The findings array is populated (may be empty when no issues are found).
+    - The riskLevel field reflects the highest-severity finding present.
+    - Each finding with severity >= warning includes a recommendation field
+      referencing the correct litedbmodel API method.
+
+implement-litedbmodel-feature:
+  description: >-
+    Implement a litedbmodel-based business feature by reading model definitions
+    and writing TypeScript code directly to the target file. The agent uses
+    file tools (Glob, Read, Edit, Write) to operate on the user's project,
+    proactively avoiding all eight litedbmodel anti-patterns.
+  target_agent: litedbmodel-implementer
+  allowed_from_agents:
+    - litedbmodel-implementer
+  workflow: implement-workflow
+  input_artifacts: []
+  invocation_handoff: litedbmodel-implement-request
+  result_handoff: litedbmodel-implement-result
+  responsibilities:
+    - Parse the feature description to identify the required data operations.
+    - Read model definition files using Glob + Read to understand available
+      models, columns, and constraints.
+    - Read the target file to understand its current state.
+    - Write the implementation to the target file using Edit or Write tools.
+    - Apply best-practice patterns proactively (createMany, upsert, forUpdate,
+      transaction) so that no anti-pattern appears in the written code.
+    - Report what was changed in the changedFiles array.
+  completion_criteria:
+    - The target file has been modified on disk via file tools.
+    - Written code uses only documented litedbmodel API methods.
+    - None of the eight anti-patterns appear in the written code.
+    - The changedFiles array lists every file that was created or updated.
+    - If schema context is insufficient, missing information is listed
+      in the findings array and the agent stops.

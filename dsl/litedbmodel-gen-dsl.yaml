@@ -1,0 +1,69 @@
+version: 1
+
+system:
+  id: litedbmodel-gen
+  name: "litedbmodel-gen Agent System"
+  default_workflow_order:
+    - audit-workflow
+    - implement-workflow
+
+agents:
+  $ref: "./agents/"
+
+tasks:
+  $ref: "./tasks.yaml"
+
+handoff_types:
+  $ref: "./handoff-types.yaml"
+
+guardrails:
+  output-schema-conformance:
+    description: >-
+      All agent outputs must conform to the declared result handoff schema
+      before being returned to the CLI formatter. Non-conformant output
+      breaks exit-code mapping and structured reporting.
+    scope:
+      agents:
+        - litedbmodel-auditor
+        - litedbmodel-implementer
+      tasks:
+        - audit-litedbmodel-usage
+        - implement-litedbmodel-feature
+    rationale: >-
+      Structured output (AgentAuditResult shape) is a hard contract for
+      downstream CLI consumers. Validation must happen before the result
+      reaches the formatter so that exit codes remain reliable.
+
+guardrail_policies:
+  litedbmodel-safety-policy:
+    rules:
+      - guardrail: output-schema-conformance
+        severity: critical
+        action: block
+
+workflows:
+  audit-workflow:
+    description: >-
+      Single-agent workflow that audits TypeScript source files for
+      litedbmodel ORM anti-patterns and returns structured findings.
+    trigger: cli-command
+    entry_conditions:
+      - User provides a TypeScript file or directory path to audit.
+      - Source code contains at least one litedbmodel model import.
+    steps:
+      - type: delegate
+        task: audit-litedbmodel-usage
+        from_agent: litedbmodel-auditor
+
+  implement-workflow:
+    description: >-
+      Single-agent workflow that generates TypeScript implementation code
+      for a litedbmodel-based feature described by the user.
+    trigger: cli-command
+    entry_conditions:
+      - User provides a natural-language feature description.
+      - At least model definitions or SQL schema context is available.
+    steps:
+      - type: delegate
+        task: implement-litedbmodel-feature
+        from_agent: litedbmodel-implementer

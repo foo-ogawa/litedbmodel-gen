@@ -4,8 +4,109 @@ export interface InitArgs {
   config?: string;
 }
 
-export type InitExitCode = 0 | 1;
+export type InitExitCode = 0 | 1 | 3;
 
 export type InitExitResult =
   { exitCode: 0; stdout: unknown }
-  | { exitCode: 1; stderr: unknown };
+  | { exitCode: 1; stderr: unknown }
+  | { exitCode: 3; stderr: unknown };
+
+export interface AuditArgs {
+  target?: string;
+}
+
+export interface AuditOptions {
+  adapter?: "mock" | "cursor" | "claude" | "openai" | "gemini";
+  model?: string;
+  dryRun?: boolean;
+  failOn?: "warning" | "error" | "critical";
+  output?: string;
+  reportFormat?: "json" | "text" | "yaml";
+}
+
+export type AuditExitCode = 0 | 1 | 3 | 10 | 11 | 12;
+
+export type AuditExitResult =
+  { exitCode: 0; stdout: { summary: string; riskLevel: "low" | "medium" | "high" | "critical"; findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[]; recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[]; metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string } } }
+  | { exitCode: 1; stderr: unknown }
+  | { exitCode: 3; stderr: unknown }
+  | { exitCode: 10; stdout: { summary: string; riskLevel: "low" | "medium" | "high" | "critical"; findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[]; recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[]; metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string } } }
+  | { exitCode: 11; stderr: unknown }
+  | { exitCode: 12; stderr: unknown };
+
+export interface ImplementArgs {
+  description: string;
+}
+
+export interface ImplementOptions {
+  target?: string;
+  models?: string;
+  adapter?: "mock" | "cursor" | "claude" | "openai" | "gemini";
+  model?: string;
+  dryRun?: boolean;
+  failOn?: "warning" | "error" | "critical";
+  output?: string;
+  reportFormat?: "json" | "text" | "yaml";
+}
+
+export type ImplementExitCode = 0 | 1 | 3 | 10 | 11 | 12;
+
+export type ImplementExitResult =
+  { exitCode: 0; stdout: { summary: string; riskLevel: "low" | "medium" | "high" | "critical"; findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[]; recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[]; metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string } } & { changedFiles: { path: string; action: "created" | "updated"; rationale?: string }[]; dependencies?: string[]; notes?: string } }
+  | { exitCode: 1; stderr: unknown }
+  | { exitCode: 3; stderr: unknown }
+  | { exitCode: 10; stdout: { summary: string; riskLevel: "low" | "medium" | "high" | "critical"; findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[]; recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[]; metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string } } & { changedFiles: { path: string; action: "created" | "updated"; rationale?: string }[]; dependencies?: string[]; notes?: string } }
+  | { exitCode: 11; stderr: unknown }
+  | { exitCode: 12; stderr: unknown };
+
+export interface AgentEvidence {
+  type: string;
+  content: string;
+  source?: string;
+}
+
+export interface AgentFinding {
+  id?: string;
+  severity: "info" | "warning" | "error" | "critical";
+  category: string;
+  target?: string;
+  location?: string;
+  message: string;
+  recommendation?: string;
+  confidence?: number;
+  evidence?: { type: string; content: string; source?: string }[];
+  details?: Record<string, unknown>;
+}
+
+export interface AgentRecommendedAction {
+  kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore";
+  title: string;
+  command?: string;
+  target?: string;
+  rationale?: string;
+}
+
+export interface AgentAuditResult {
+  summary: string;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[];
+  recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[];
+  metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string };
+}
+
+export interface FileChange {
+  path: string;
+  action: "created" | "updated";
+  rationale?: string;
+}
+
+export interface LitedbmodelImplementResult {
+  summary: string;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  findings: { id?: string; severity: "info" | "warning" | "error" | "critical"; category: string; target?: string; location?: string; message: string; recommendation?: string; confidence?: number; evidence?: { type: string; content: string; source?: string }[]; details?: Record<string, unknown> }[];
+  recommendedActions?: { kind: "run_command" | "edit_file" | "review" | "confirm" | "block" | "ignore"; title: string; command?: string; target?: string; rationale?: string }[];
+  metadata?: { tool?: string; command?: string; version?: string; generatedAt?: string; adapter?: string; model?: string };
+  changedFiles: { path: string; action: "created" | "updated"; rationale?: string }[];
+  dependencies?: string[];
+  notes?: string;
+}

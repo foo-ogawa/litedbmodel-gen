@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import yaml from 'js-yaml';
 import { createProgram, type CommandHandlers } from './generated/program.js';
+import { commandAudit } from './commands/audit.js';
+import { commandImplement } from './commands/implement.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -39,12 +41,42 @@ function resolveEmbedocDirs(configPath: string): EmbedocDirs {
 }
 
 const handlers: CommandHandlers = {
+  // ── audit ──────────────────────────────────────────────────────────────────
+  audit: async (target, opts) => {
+    await commandAudit(target, {
+      adapter:      opts.adapter as string | undefined,
+      model:        opts.model as string | undefined,
+      dryRun:       opts.dryRun as boolean | undefined,
+      failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
+      output:       opts.output as string | undefined,
+      reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
+    });
+  },
+
+  // ── implement ──────────────────────────────────────────────────────────────
+  implement: async (description, opts) => {
+    await commandImplement(description, {
+      target:       opts.target as string | undefined,
+      models:       opts.models as string | undefined,
+      adapter:      opts.adapter as string | undefined,
+      model:        opts.model as string | undefined,
+      dryRun:       opts.dryRun as boolean | undefined,
+      failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
+      output:       opts.output as string | undefined,
+      reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
+    });
+  },
+
+  // ── init ───────────────────────────────────────────────────────────────────
   init: async (config) => {
     const configPath = config ?? 'embedoc.config.yaml';
     const absConfigPath = resolve(configPath);
     if (!existsSync(absConfigPath)) {
-      console.error(`Error: ${configPath} not found. Run "npx embedoc init" first.`);
-      process.exit(1);
+      process.stderr.write(JSON.stringify({
+        error: "config_not_found",
+        message: `${configPath} not found. Run "npx embedoc init" first.`,
+      }, null, 2) + "\n");
+      process.exit(3);
     }
 
     const dirs = resolveEmbedocDirs(absConfigPath);
