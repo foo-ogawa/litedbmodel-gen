@@ -28,7 +28,8 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "cli:generate": "cli-contracts generate",
-    "dsl:generate": "agent-runtime generate --config dsl/agent-runtime.config.yaml"
+    "dsl:generate": "agent-runtime generate --config dsl/agent-runtime.config.yaml",
+    "test:ci": "vitest run"
   },
   "keywords": [
     "litedbmodel",
