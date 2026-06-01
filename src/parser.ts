@@ -13,9 +13,11 @@ export function parseSchema(
   const database = options?.database || 'PostgreSQL';
   const parser = new Parser();
 
+  const sanitized = stripCheckConstraints(sql);
+
   let statements: unknown[];
   try {
-    const result = parser.astify(sql, { database });
+    const result = parser.astify(sanitized, { database });
     statements = Array.isArray(result) ? result : [result];
   } catch {
     return [];
@@ -151,4 +153,73 @@ function normalizeSqlType(
   }
 
   return base;
+}
+
+/**
+ * Removes CHECK constraint clauses from SQL before parsing.
+ * node-sql-parser cannot handle PostgreSQL-specific operators (e.g. ~ ~* !~ !~*)
+ * inside CHECK expressions, and CHECK constraints are irrelevant for model generation.
+ */
+export function stripCheckConstraints(sql: string): string {
+  const pattern =
+    /(?:CONSTRAINT\s+(?:"[^"]+"|[^\s(]+)\s+)?CHECK\s*\(/gi;
+
+  const ranges: [number, number][] = [];
+  let match;
+
+  while ((match = pattern.exec(sql)) !== null) {
+    let start = match.index;
+
+    // Balance parentheses from the opening (
+    let depth = 1;
+    let pos = start + match[0].length;
+    let inStr = false;
+
+    while (pos < sql.length && depth > 0) {
+      const ch = sql[pos];
+      if (inStr) {
+        if (ch === "'" && sql[pos + 1] === "'") {
+          pos += 2;
+          continue;
+        }
+        if (ch === "'") inStr = false;
+      } else {
+        if (ch === "'") inStr = true;
+        else if (ch === '(') depth++;
+        else if (ch === ')') depth--;
+      }
+      pos++;
+    }
+
+    let end = pos;
+
+    // Absorb surrounding comma to keep valid SQL
+    let lb = start - 1;
+    while (lb >= 0 && /\s/.test(sql[lb])) lb--;
+
+    if (lb >= 0 && sql[lb] === ',') {
+      start = lb;
+    } else {
+      let tf = end;
+      while (tf < sql.length && /\s/.test(sql[tf])) tf++;
+      if (tf < sql.length && sql[tf] === ',') {
+        end = tf + 1;
+      }
+    }
+
+    ranges.push([start, end]);
+    pattern.lastIndex = end;
+  }
+
+  if (ranges.length === 0) return sql;
+
+  let result = '';
+  let lastEnd = 0;
+  for (const [s, e] of ranges) {
+    result += sql.slice(lastEnd, s);
+    lastEnd = e;
+  }
+  result += sql.slice(lastEnd);
+
+  return result;
 }
