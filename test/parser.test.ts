@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSchema } from '../src/parser';
+import { parseSchema, stripCheckConstraints } from '../src/parser';
 
 describe('parseSchema - PostgreSQL', () => {
   it('parses a basic CREATE TABLE', () => {
@@ -184,5 +184,163 @@ describe('parseSchema - defaults to PostgreSQL', () => {
     const sql = `CREATE TABLE t (id SERIAL PRIMARY KEY);`;
     const tables = parseSchema(sql);
     expect(tables).toHaveLength(1);
+  });
+});
+
+describe('parseSchema - CHECK constraints', () => {
+  it('parses table with regex CHECK constraint (~ operator)', () => {
+    const sql = `
+      CREATE TABLE meals (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        salt_g TEXT NOT NULL,
+        CONSTRAINT meals_salt_g_format_check CHECK ((salt_g ~ '^\\d+(\\.\\d+)?$'::text))
+      );
+    `;
+    const tables = parseSchema(sql, { database: 'PostgreSQL' });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].name).toBe('meals');
+    expect(tables[0].columns).toHaveLength(3);
+    expect(tables[0].columns.map(c => c.name)).toEqual(['id', 'name', 'salt_g']);
+  });
+
+  it('parses table with multiple CHECK constraints', () => {
+    const sql = `
+      CREATE TABLE products (
+        id SERIAL PRIMARY KEY,
+        price NUMERIC NOT NULL,
+        code TEXT NOT NULL,
+        CONSTRAINT products_price_positive CHECK ((price > 0)),
+        CONSTRAINT products_code_format CHECK ((code ~ '^[A-Z]{3}-\\d+$'::text))
+      );
+    `;
+    const tables = parseSchema(sql, { database: 'PostgreSQL' });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].columns).toHaveLength(3);
+    expect(tables[0].columns.map(c => c.name)).toEqual(['id', 'price', 'code']);
+  });
+
+  it('parses pg_dump-style schema with CHECK constraints across multiple tables', () => {
+    const sql = `
+      CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL
+      );
+
+      CREATE TABLE meals (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        salt_g TEXT NOT NULL,
+        sugar_g TEXT NOT NULL,
+        CONSTRAINT meals_salt_g_format_check CHECK ((salt_g ~ '^\\d+(\\.\\d+)?$'::text)),
+        CONSTRAINT meals_sugar_g_format_check CHECK ((sugar_g ~ '^\\d+(\\.\\d+)?$'::text))
+      );
+    `;
+    const tables = parseSchema(sql, { database: 'PostgreSQL' });
+    expect(tables).toHaveLength(2);
+    expect(tables[0].name).toBe('users');
+    expect(tables[1].name).toBe('meals');
+    expect(tables[1].columns).toHaveLength(4);
+  });
+
+  it('handles CHECK with negated regex operators (!~ and !~*)', () => {
+    const sql = `
+      CREATE TABLE items (
+        id SERIAL PRIMARY KEY,
+        code TEXT NOT NULL,
+        CONSTRAINT items_code_no_spaces CHECK ((code !~ '\\s'))
+      );
+    `;
+    const tables = parseSchema(sql, { database: 'PostgreSQL' });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].columns).toHaveLength(2);
+  });
+
+  it('handles CHECK constraint without CONSTRAINT keyword', () => {
+    const sql = `
+      CREATE TABLE t (
+        id SERIAL PRIMARY KEY,
+        val INTEGER NOT NULL,
+        CHECK ((val > 0))
+      );
+    `;
+    const tables = parseSchema(sql, { database: 'PostgreSQL' });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].columns).toHaveLength(2);
+  });
+});
+
+describe('stripCheckConstraints', () => {
+  it('returns sql unchanged when no CHECK constraints', () => {
+    const sql = `CREATE TABLE t (id SERIAL PRIMARY KEY, name TEXT);`;
+    expect(stripCheckConstraints(sql)).toBe(sql);
+  });
+
+  it('strips named CHECK at end of definition list', () => {
+    const sql = [
+      'CREATE TABLE t (',
+      '  id SERIAL PRIMARY KEY,',
+      '  val TEXT NOT NULL,',
+      "  CONSTRAINT chk CHECK ((val ~ '^\\d+$'::text))",
+      ');',
+    ].join('\n');
+    const result = stripCheckConstraints(sql);
+    expect(result).not.toContain('CHECK');
+    expect(result).not.toContain('CONSTRAINT');
+    expect(result).toContain('id SERIAL PRIMARY KEY');
+    expect(result).toContain('val TEXT NOT NULL');
+  });
+
+  it('strips CHECK in middle of definition list', () => {
+    const sql = [
+      'CREATE TABLE t (',
+      "  CONSTRAINT chk CHECK ((val ~ '^\\d+$'::text)),",
+      '  id SERIAL PRIMARY KEY,',
+      '  val TEXT NOT NULL',
+      ');',
+    ].join('\n');
+    const result = stripCheckConstraints(sql);
+    expect(result).not.toContain('CHECK');
+    expect(result).toContain('id SERIAL PRIMARY KEY');
+    expect(result).toContain('val TEXT NOT NULL');
+  });
+
+  it('strips multiple CHECK constraints', () => {
+    const sql = [
+      'CREATE TABLE t (',
+      '  id SERIAL PRIMARY KEY,',
+      '  a TEXT NOT NULL,',
+      '  b TEXT NOT NULL,',
+      "  CONSTRAINT chk_a CHECK ((a ~ '^\\d+$'::text)),",
+      "  CONSTRAINT chk_b CHECK ((b ~ '^\\d+$'::text))",
+      ');',
+    ].join('\n');
+    const result = stripCheckConstraints(sql);
+    expect(result).not.toContain('CHECK');
+    expect(result).toContain('id SERIAL PRIMARY KEY');
+    expect(result).toContain('a TEXT NOT NULL');
+    expect(result).toContain('b TEXT NOT NULL');
+  });
+
+  it('handles CHECK with escaped single quotes in expression', () => {
+    const sql = `CREATE TABLE t (
+  id SERIAL PRIMARY KEY,
+  val TEXT NOT NULL,
+  CONSTRAINT chk CHECK ((val <> 'it''s'))
+);`;
+    const result = stripCheckConstraints(sql);
+    expect(result).not.toContain('CHECK');
+    expect(result).toContain('val TEXT NOT NULL');
+  });
+
+  it('handles CHECK with quoted constraint name', () => {
+    const sql = `CREATE TABLE t (
+  id SERIAL PRIMARY KEY,
+  val INTEGER NOT NULL,
+  CONSTRAINT "my-check" CHECK ((val > 0))
+);`;
+    const result = stripCheckConstraints(sql);
+    expect(result).not.toContain('CHECK');
+    expect(result).not.toContain('my-check');
   });
 });
