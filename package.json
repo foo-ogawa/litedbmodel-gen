@@ -1,6 +1,6 @@
 {
   "name": "litedbmodel-gen",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "embedoc-based model code generator for litedbmodel — generates TypeScript column definitions from SQL DDL (PostgreSQL/MySQL/SQLite)",
   "type": "module",
   "main": "dist/index.js",
@@ -12,9 +12,11 @@
     }
   },
   "bin": {
-    "litedbmodel-gen": "./dist/cli.js"
+    "litedbmodel-gen": "dist/litedbmodel-gen.bundle.mjs"
   },
   "files": [
+    "dist/litedbmodel-gen.bundle.mjs",
+    "dist/litedbmodel-gen.bundle.mjs.map",
     "dist",
     "templates",
     "docs",
@@ -22,11 +24,13 @@
   ],
   "scripts": {
     "build": "tsup",
+    "bundle": "node esbuild.bundle.mjs",
+    "bundle:min": "node esbuild.bundle.mjs --minify",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run bundle:min && npm run test:ci",
     "cli:generate": "cli-contracts generate",
     "dsl:generate": "agent-runtime generate --config dsl/agent-runtime.config.yaml",
     "test:ci": "vitest run"
@@ -44,10 +48,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
-    "commander": "^14.0.3",
-    "js-yaml": "^4.1.1",
-    "node-sql-parser": "^5.4.0"
+    "better-sqlite3": "^12.10.0"
   },
   "peerDependencies": {
     "embedoc": ">=0.11.0"
@@ -73,8 +74,12 @@
     "@types/node": "^25.3.3",
     "agent-contracts": "^0.32.0",
     "agent-contracts-runtime": "^0.32.1",
-    "cli-contracts": "^0.31.6",
+    "cli-contracts": "^0.32.0",
+    "commander": "^14.0.3",
     "embedoc": "^0.11.0",
+    "esbuild": "^0.28.0",
+    "js-yaml": "^4.1.1",
+    "node-sql-parser": "^5.4.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.0",
     "vitest": "^4.1.7",
