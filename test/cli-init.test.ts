@@ -5,7 +5,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 
 const TMP_DIR = join(tmpdir(), 'ldbmgen-cli-test');
-const CLI_PATH = join(import.meta.dirname!, '..', 'dist', 'cli.js');
+const CLI_PATH = join(import.meta.dirname!, '..', 'dist', 'litedbmodel-gen.bundle.mjs');
 
 function setupProject() {
   rmSync(TMP_DIR, { recursive: true, force: true });
