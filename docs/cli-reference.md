@@ -112,6 +112,7 @@ litedbmodel-gen audit src/services/user-service.ts --fail-on warning --report-fo
 | `--fail-on` |  | No | `"error"` | Minimum finding severity that causes exit code 10. Findings below this threshold are still reported. |
 | `--output` | -o | No |  | Write the report to a file instead of stdout. |
 | `--report-format` |  | No | `"json"` | Output format for the audit report. |
+| `--log-file` | -l | No |  | File path to write structured progress logs. |
 
 #### Exit Codes
 
@@ -146,6 +147,7 @@ x-agent:
   riskLevel: low
   requiresConfirmation: false
   idempotent: true
+  dsl_task: audit-litedbmodel-usage
   sideEffects: 
     - network
   sideEffectNote: Makes network calls to the configured LLM provider when adapter is not "mock". Writes to the filesystem only when --output is specified.
@@ -191,6 +193,7 @@ litedbmodel-gen implement "Add bulk upsert for order items" --target src/service
 | `--fail-on` |  | No | `"error"` | Minimum finding severity that causes exit code 10. Design concerns (info/warning) are still reported at exit 0. |
 | `--output` | -o | No |  | Write the report to a file instead of stdout. |
 | `--report-format` |  | No | `"json"` | Output format for the implementation report. |
+| `--log-file` | -l | No |  | File path to write structured progress logs. |
 
 #### Exit Codes
 
@@ -225,6 +228,7 @@ x-agent:
   riskLevel: high
   requiresConfirmation: true
   idempotent: false
+  dsl_task: implement-litedbmodel-feature
   sideEffects: 
     - network
     - filesystem_write

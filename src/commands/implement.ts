@@ -38,6 +38,8 @@ export interface ImplementCommandOpts {
   output?: string;
   /** Output format: json | text | yaml (default: "json") */
   reportFormat?: "json" | "text" | "yaml";
+  /** File path to write structured progress logs */
+  logFile?: string;
 }
 
 // ── Command handler ───────────────────────────────────────────────────────────
@@ -97,6 +99,7 @@ export async function commandImplement(
   const agentOpts: AgentOptions = {
     dryRun: opts.dryRun ?? false,
     failOn: opts.failOn ?? "error",
+    logFile: opts.logFile,
   };
 
   // Run the agent task.

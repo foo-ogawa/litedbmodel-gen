@@ -22,6 +22,7 @@ export interface AuditOptions {
   failOn?: "warning" | "error" | "critical";
   output?: string;
   reportFormat?: "json" | "text" | "yaml";
+  logFile?: string;
 }
 
 export type AuditExitCode = 0 | 1 | 3 | 10 | 11 | 12;
@@ -47,6 +48,7 @@ export interface ImplementOptions {
   failOn?: "warning" | "error" | "critical";
   output?: string;
   reportFormat?: "json" | "text" | "yaml";
+  logFile?: string;
 }
 
 export type ImplementExitCode = 0 | 1 | 3 | 10 | 11 | 12;
