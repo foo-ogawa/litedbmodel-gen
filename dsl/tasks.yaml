@@ -6,6 +6,7 @@ audit-litedbmodel-usage:
     UNIQUE_MISSING, N_PLUS_ONE) and return structured findings with severity
     ratings and remediation guidance referencing the correct litedbmodel API.
   target_agent: litedbmodel-auditor
+  model_class: standard
   allowed_from_agents:
     - litedbmodel-auditor
   workflow: audit-workflow
@@ -31,6 +32,7 @@ implement-litedbmodel-feature:
     file tools (Glob, Read, Edit, Write) to operate on the user's project,
     proactively avoiding all eight litedbmodel anti-patterns.
   target_agent: litedbmodel-implementer
+  model_class: thinking
   allowed_from_agents:
     - litedbmodel-implementer
   workflow: implement-workflow

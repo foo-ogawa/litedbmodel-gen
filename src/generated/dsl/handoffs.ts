@@ -41,7 +41,7 @@ export const LitedbmodelAuditResultSchema = z.object({
   location: z.string().optional(),
   message: z.string(),
   recommendation: z.string().optional(),
-  confidence: z.number().optional(),
+  confidence: z.number().min(0).max(1).optional(),
   evidence: z.array(z.object({
   type: z.string(),
   content: z.string(),
@@ -83,7 +83,7 @@ export const LitedbmodelImplementResultSchema = z.object({
   location: z.string().optional(),
   message: z.string(),
   recommendation: z.string().optional(),
-  confidence: z.number().optional(),
+  confidence: z.number().min(0).max(1).optional(),
   evidence: z.array(z.object({
   type: z.string(),
   content: z.string(),
