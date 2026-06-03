@@ -6,6 +6,7 @@ import yaml from 'js-yaml';
 import { createProgram, type CommandHandlers } from './generated/program.js';
 import { commandAudit } from './commands/audit.js';
 import { commandImplement } from './commands/implement.js';
+import { resolvedDsl } from './generated/dsl/index.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -65,6 +66,22 @@ const handlers: CommandHandlers = {
       output:       opts.output as string | undefined,
       reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
     });
+  },
+
+  // ── agents ─────────────────────────────────────────────────────────────────
+  agents: async (opts) => {
+    const YAML = await import('yaml');
+    const format = opts.format ?? 'yaml';
+    try {
+      if (format === 'json') {
+        console.log(JSON.stringify(resolvedDsl, null, 2));
+      } else {
+        console.log(YAML.stringify(resolvedDsl, { lineWidth: 120 }));
+      }
+    } catch (err) {
+      console.error(`Failed to output DSL: ${(err as Error).message}`);
+      process.exit(1);
+    }
   },
 
   // ── init ───────────────────────────────────────────────────────────────────

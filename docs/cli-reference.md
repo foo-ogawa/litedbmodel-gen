@@ -10,6 +10,7 @@ embedoc-based model code generator for litedbmodel. Parses SQL DDL (PostgreSQL /
   - [init](#litedbmodel-gen-init)
   - [audit](#litedbmodel-gen-audit)
   - [implement](#litedbmodel-gen-implement)
+  - [agents](#litedbmodel-gen-agents)
 
 ---
 
@@ -233,6 +234,47 @@ x-agent:
   retryableExitCodes: 
     - 1
     - 12
+```
+
+---
+
+### agents
+
+Output the full resolved agent DSL as structured data.
+
+Outputs the complete resolved agent-contracts DSL (agents, tasks, workflows, handoff_types) embedded in this CLI binary. Useful for debugging, external tooling integration, and DSL inspection.
+
+**Usage:**
+
+```
+litedbmodel-gen agents [--format]
+```
+
+#### Options
+
+| Option | Aliases | Required | Default | Description |
+|---|---|---|---|---|
+| `--format` | -F | No | `"yaml"` | Output format. |
+
+#### Exit Codes
+
+**Exit 0:** DSL output successfully.
+
+- **stdout:** format=`text`
+
+**Exit 1:** Failed to load embedded DSL.
+
+- **stderr:** format=`text`
+
+#### Extensions
+
+```yaml
+x-agent: 
+  riskLevel: low
+  requiresConfirmation: false
+  idempotent: true
+  sideEffects: 
+
 ```
 
 ---

@@ -549,3 +549,4 @@ export const schemas = {
 export const initExitCodes = [0, 1, 3] as const;
 export const auditExitCodes = [0, 1, 3, 10, 11, 12] as const;
 export const implementExitCodes = [0, 1, 3, 10, 11, 12] as const;
+export const agentsExitCodes = [0, 1] as const;
