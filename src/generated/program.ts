@@ -4,8 +4,8 @@ import { CONTRACT_YAML, CONTRACT_JSON_STR } from "./contract.js";
 
 export interface CommandHandlers {
   init: (config: string | undefined, options: Record<string, never>, parentOpts: Record<string, unknown>) => Promise<void>;
-  audit: (target: string | undefined, options: { adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
-  implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
+  audit: (target: string | undefined, options: { adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
+  implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
   agents: (options: { format?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
 }
 
@@ -38,6 +38,7 @@ export function createProgram(
     .option("--fail-on <value>", "Minimum finding severity that causes exit code 10. Findings below this threshold are still reported.", "error")
     .option("-o, --output <value>", "Write the report to a file instead of stdout.")
     .option("--report-format <value>", "Output format for the audit report.", "json")
+    .option("-l, --log-file <value>", "File path to write structured progress logs.")
     .option("--show-prompt", "Output the constructed prompt without calling the LLM API.", false)
     .action(async (target, opts, cmd) => {
       if (opts.showPrompt) {
@@ -60,6 +61,7 @@ export function createProgram(
     .option("--fail-on <value>", "Minimum finding severity that causes exit code 10. Design concerns (info/warning) are still reported at exit 0.", "error")
     .option("-o, --output <value>", "Write the report to a file instead of stdout.")
     .option("--report-format <value>", "Output format for the implementation report.", "json")
+    .option("-l, --log-file <value>", "File path to write structured progress logs.")
     .option("--show-prompt", "Output the constructed prompt without calling the LLM API.", false)
     .action(async (description, opts, cmd) => {
       if (opts.showPrompt) {

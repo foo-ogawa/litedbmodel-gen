@@ -8,6 +8,8 @@
  *  R-IMPL-007 — generated registries imported from src/generated/dsl/index.js
  */
 
+import { resolve } from "node:path";
+import { resolvedDsl } from "../generated/dsl/dsl-data.js";
 import type { AgentConfig, AgentOptions, AgentRunResult, AgentResultData, TaskId } from "./types.js";
 
 export const EXIT_RUNTIME_MISSING = 11;
@@ -91,34 +93,7 @@ async function createAdapter(
   }
 }
 
-// ── Generated registry loader ─────────────────────────────────────────────────
-
-async function loadRegistries(): Promise<{
-  agentRegistry: Record<string, unknown>;
-  taskRegistry: Record<string, unknown>;
-  handoffSchemas: Record<string, unknown>;
-  workflowRegistry: Record<string, unknown>;
-}> {
-  try {
-    // R-IMPL-007: import from generated/dsl/index.js; never hard-code definitions.
-    const dsl = await import("../generated/dsl/index.js");
-    return {
-      agentRegistry: (dsl.agentRegistry ?? {}) as Record<string, unknown>,
-      taskRegistry: (dsl.taskRegistry ?? {}) as Record<string, unknown>,
-      handoffSchemas: (dsl.handoffSchemas ?? {}) as Record<string, unknown>,
-      workflowRegistry: (dsl.workflowRegistry ?? {}) as Record<string, unknown>,
-    };
-  } catch (err: unknown) {
-    const msg = (err as { message?: string }).message ?? String(err);
-    process.stderr.write(
-      `[litedbmodel-gen] warning: generated DSL registries could not be ` +
-      `loaded — running without schema contracts. ` +
-      `Run: npx agent-runtime generate\n` +
-      `  Cause: ${msg}\n`,
-    );
-    return { agentRegistry: {}, taskRegistry: {}, handoffSchemas: {}, workflowRegistry: {} };
-  }
-}
+// ── DSL context loader ────────────────────────────────────────────────────────
 
 // ── Main entry point ──────────────────────────────────────────────────────────
 
@@ -137,33 +112,21 @@ export async function runAgentTask(
   options: AgentOptions,
 ): Promise<AgentRunResult> {
   // Dynamic import of agent-contracts-runtime (R-IMPL-006).
-  let runTask: (
-    adapter: unknown,
-    taskId: string,
-    context: { user_request: string },
-    options?: Record<string, unknown>,
-  ) => Promise<{
-    outcome: {
-      data?: unknown;
-      raw?: string;
-      errors?: string[];
-      reason?: string;
-      message?: string;
-    };
-    follow_ups_used: number;
-    retries_used: number;
-  }>;
-  let buildTaskPrompt: (
-    agent: unknown,
-    task: unknown,
-    context: { user_request: string },
-    options?: Record<string, unknown>,
-  ) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let runTask: (...args: any[]) => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let buildTaskPrompt: (...args: any[]) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let loadDslContext: (opts: any) => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let createProgressSink: (opts: any) => any;
 
   try {
     const rt = await import(PKG);
     runTask = rt.runTask;
     buildTaskPrompt = rt.buildTaskPrompt;
+    loadDslContext = rt.loadDslContext;
+    createProgressSink = rt.createProgressSink;
   } catch {
     throw Object.assign(
       new Error(
@@ -174,8 +137,14 @@ export async function runAgentTask(
     );
   }
 
-  // Load DSL registries (R-IMPL-007).
-  const registries = await loadRegistries();
+  // Load DSL registries via loadDslContext (R-IMPL-007).
+  const ctx = await loadDslContext({
+    embeddedDsl: resolvedDsl,
+    requiredEntities: {
+      tasks: ["audit-litedbmodel-usage", "implement-litedbmodel-feature"],
+    },
+  });
+  const registries = ctx.registries;
 
   // Dry-run: build the full prompt (system + user) without calling the LLM.
   if (options.dryRun) {
@@ -216,17 +185,28 @@ export async function runAgentTask(
   // Create adapter (R-IMPL-001).
   const adapter = await createAdapter(config.adapter ?? "mock", config);
 
+  // Create progress sink for structured logging.
+  const progressSink = options.logFile
+    ? createProgressSink({ stderr: true, file: resolve(options.logFile), naming: "single" })
+    : createProgressSink({ stderr: true });
+
   // Execute via runTask — never call adapter methods directly (R-IMPL-002).
-  const result = await runTask(
-    adapter,
-    taskId,
-    { user_request: userRequest },
-    {
-      maxFollowUps: 3,
-      maxRetries: 1,
-      ...registries,
-    },
-  );
+  let result;
+  try {
+    result = await runTask(
+      adapter,
+      taskId,
+      { user_request: userRequest },
+      {
+        maxFollowUps: 3,
+        maxRetries: 1,
+        progressOutput: progressSink,
+        ...registries,
+      },
+    );
+  } finally {
+    progressSink.close();
+  }
 
   const { outcome, follow_ups_used, retries_used } = result;
 

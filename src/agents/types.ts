@@ -27,6 +27,8 @@ export interface AgentOptions {
   dryRun?: boolean;
   /** Minimum finding severity that triggers exit code 10. */
   failOn?: "warning" | "error" | "critical";
+  /** File path to write structured progress logs. */
+  logFile?: string;
 }
 
 // ── Result data shapes ────────────────────────────────────────────────────────

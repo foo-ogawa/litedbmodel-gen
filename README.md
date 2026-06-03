@@ -93,6 +93,7 @@ npx litedbmodel-gen implement "..." --target src/services/foo.ts --adapter claud
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
 | `--output <path>` | — | Write result to file instead of stdout |
 | `--fail-on` | `error` | Minimum severity that causes exit code 10 |
+| `--log-file, -l` | — | File path to write structured progress logs |
 
 ### `litedbmodel-gen audit [target]`
 
@@ -118,6 +119,14 @@ npx litedbmodel-gen audit src/ --adapter claude --report-format text
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
 | `--output <path>` | — | Write result to file instead of stdout |
 | `--fail-on` | `error` | Minimum severity that causes exit code 10 |
+| `--log-file, -l` | — | File path to write structured progress logs |
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `litedbmodel-gen extract` | Output the embedded CLI contract specification (YAML) for external tooling |
+| `litedbmodel-gen agents` | List registered DSL agents, tasks, and workflows |
 
 ### Recommended Workflow
 

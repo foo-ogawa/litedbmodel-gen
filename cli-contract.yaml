@@ -180,10 +180,19 @@ command_sets:
               enum: [json, text, yaml]
               default: json
 
+          - name: log-file
+            aliases: [l]
+            description: File path to write structured progress logs.
+            schema:
+              type: string
+            file:
+              mode: write
+
         x-agent:
           riskLevel: low
           requiresConfirmation: false
           idempotent: true
+          dsl_task: audit-litedbmodel-usage
           sideEffects: [network]
           sideEffectNote: >-
             Makes network calls to the configured LLM provider when adapter is
@@ -323,10 +332,19 @@ command_sets:
               enum: [json, text, yaml]
               default: json
 
+          - name: log-file
+            aliases: [l]
+            description: File path to write structured progress logs.
+            schema:
+              type: string
+            file:
+              mode: write
+
         x-agent:
           riskLevel: high
           requiresConfirmation: true
           idempotent: false
+          dsl_task: implement-litedbmodel-feature
           sideEffects: [network, filesystem_write]
           sideEffectNote: >-
             The agent reads project files and writes implementation code

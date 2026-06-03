@@ -44,6 +44,7 @@ export async function litedbmodelGenAudit(
     if (options.failOn !== undefined) cmdArgs.push("--fail-on", String(options.failOn));
     if (options.output !== undefined) cmdArgs.push("--output", String(options.output));
     if (options.reportFormat !== undefined) cmdArgs.push("--report-format", String(options.reportFormat));
+    if (options.logFile !== undefined) cmdArgs.push("--log-file", String(options.logFile));
   }
 
   try {
@@ -75,6 +76,7 @@ export async function litedbmodelGenImplement(
     if (options.failOn !== undefined) cmdArgs.push("--fail-on", String(options.failOn));
     if (options.output !== undefined) cmdArgs.push("--output", String(options.output));
     if (options.reportFormat !== undefined) cmdArgs.push("--report-format", String(options.reportFormat));
+    if (options.logFile !== undefined) cmdArgs.push("--log-file", String(options.logFile));
   }
 
   try {
