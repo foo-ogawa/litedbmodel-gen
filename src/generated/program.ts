@@ -6,6 +6,7 @@ export interface CommandHandlers {
   init: (config: string | undefined, options: Record<string, never>, parentOpts: Record<string, unknown>) => Promise<void>;
   audit: (target: string | undefined, options: { adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
   implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; dryRun?: boolean; failOn?: string; output?: string; reportFormat?: string; showPrompt?: boolean }, parentOpts: Record<string, unknown>) => Promise<void | string>;
+  agents: (options: { format?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
 }
 
 export function createProgram(
@@ -69,6 +70,14 @@ export function createProgram(
       await handlers.implement(description, opts, cmd.optsWithGlobals());
     });
 
+  program
+    .command("agents")
+    .description("Output the full resolved agent DSL as structured data.")
+    .option("-F, --format <value>", "Output format.", "yaml")
+    .action(async (opts, cmd) => {
+      await handlers.agents(opts, cmd.optsWithGlobals());
+    });
+
 
   // Built-in extract command (auto-injected by cli-contracts)
   program
@@ -98,7 +107,7 @@ export function createProgram(
               type: "cli-contracts/extract",
               extractedAt: new Date().toISOString(),
               specVersion: doc.cli_contracts ?? "0.1.0",
-              commands: ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement"],
+              commands: ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.agents"],
             };
           }
           Object.assign(out, doc);
@@ -116,7 +125,7 @@ export function createProgram(
             yamlLines.push("extractedAt: " + new Date().toISOString());
             yamlLines.push("spec_version: " + (doc.cli_contracts ?? "0.1.0"));
             yamlLines.push("commands:");
-            for (const id of ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement"]) {
+            for (const id of ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.agents"]) {
               yamlLines.push("  - " + id);
             }
           }
