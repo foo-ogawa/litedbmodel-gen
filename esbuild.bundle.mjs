@@ -46,7 +46,7 @@ const inlineBuildTimeConstants = {
       let contents = readFileSync(args.path, "utf8");
       // Strip shebang if present
       contents = contents.replace(/^#!.*\n/, "");
-      // Replace runtime package.json read
+      // Inline version constant (createRequire/require no longer used)
       contents = contents.replace(
         /const require = createRequire\(import\.meta\.url\);\nconst pkg = require\(['"]\.\.\/package\.json['"]\).*;\n/,
         `const pkg = { version: ${JSON.stringify(pkg.version)} };\n`,
@@ -71,8 +71,8 @@ const result = await build({
   banner: {
     js: [
       "#!/usr/bin/env node",
-      "import { createRequire } from 'module';",
-      "const require = createRequire(import.meta.url);",
+      "import { createRequire as __bundleRequire } from 'module';",
+      "const require = __bundleRequire(import.meta.url);",
     ].join("\n"),
   },
   plugins: [resolveRuntimeDynamicImports, inlineBuildTimeConstants],
