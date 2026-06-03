@@ -7,6 +7,8 @@
 import type { AgentId } from "./agents";
 import type { HandoffTypeId } from "./handoffs";
 
+export type ModelClass = "fast" | "standard" | "thinking";
+
 export interface TaskContract {
   readonly id: string;
   readonly description: string;
@@ -19,6 +21,7 @@ export interface TaskContract {
   readonly responsibilities: readonly string[];
   readonly completion_criteria: readonly string[];
   readonly optional: boolean;
+  readonly model_class?: ModelClass;
 }
 
 export const auditLitedbmodelUsage: TaskContract = {
@@ -44,6 +47,7 @@ export const auditLitedbmodelUsage: TaskContract = {
   "Each finding with severity >= warning includes a recommendation field referencing the correct litedbmodel API method."
 ],
   optional: false,
+  model_class: "standard",
 };
 
 export const implementLitedbmodelFeature: TaskContract = {
@@ -73,6 +77,7 @@ export const implementLitedbmodelFeature: TaskContract = {
   "If schema context is insufficient, missing information is listed in the findings array and the agent stops."
 ],
   optional: false,
+  model_class: "thinking",
 };
 
 export const taskRegistry: Record<string, TaskContract> = {
