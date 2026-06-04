@@ -77,7 +77,7 @@ npx litedbmodel-gen implement \
 
 # Preview the full prompt without calling the LLM
 npx litedbmodel-gen implement "Add bulk user import" \
-  --target src/services/user.service.ts --dry-run
+  --target src/services/user.service.ts --show-prompt
 
 # Write result to a file
 npx litedbmodel-gen implement "..." --target src/services/foo.ts --adapter claude -o result.json
@@ -89,7 +89,7 @@ npx litedbmodel-gen implement "..." --target src/services/foo.ts --adapter claud
 | `--models <glob>` | `models/**/*.ts` | Glob pattern for model definition files |
 | `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `cursor`, `mock` |
 | `--model <name>` | — | Model name override for the adapter |
-| `--dry-run` | `false` | Output the prompt without calling the LLM |
+| `--show-prompt` | `false` | Output the prompt without calling the LLM |
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
 | `--output <path>` | — | Write result to file instead of stdout |
 | `--fail-on` | `error` | Minimum severity that causes exit code 10 |
@@ -115,7 +115,7 @@ npx litedbmodel-gen audit src/ --adapter claude --report-format text
 |--------|---------|-------------|
 | `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `cursor`, `mock` |
 | `--model <name>` | — | Model name override for the adapter |
-| `--dry-run` | `false` | Output the prompt without calling the LLM |
+| `--show-prompt` | `false` | Output the prompt without calling the LLM |
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
 | `--output <path>` | — | Write result to file instead of stdout |
 | `--fail-on` | `error` | Minimum severity that causes exit code 10 |

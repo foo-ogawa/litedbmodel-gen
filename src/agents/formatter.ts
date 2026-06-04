@@ -30,7 +30,7 @@ function severityIndex(s: string): number {
  *  10 — blocking findings detected at or above --fail-on threshold
  */
 export function computeExitCode(result: AgentRunResult, options: AgentOptions): number {
-  if (result.dryRun) return 0;
+  if (result.showPrompt) return 0;
 
   if (result.status === "error" || result.status === "escalation" || result.status === "validation_error") {
     return 1;
@@ -61,8 +61,8 @@ function severityIcon(severity: string): string {
 // ── Text formatter ────────────────────────────────────────────────────────────
 
 export function formatResultText(result: AgentRunResult): string {
-  if (result.dryRun) {
-    return `[DRY RUN — prompt only, LLM was not called]\n\n${result.prompt}`;
+  if (result.showPrompt) {
+    return `[SHOW PROMPT — prompt only, LLM was not called]\n\n${result.prompt}`;
   }
 
   if (result.status !== "success" || !result.data) {
@@ -139,8 +139,8 @@ export function formatResultText(result: AgentRunResult): string {
 // ── JSON formatter ────────────────────────────────────────────────────────────
 
 export function formatResultJson(result: AgentRunResult): string {
-  if (result.dryRun) {
-    return JSON.stringify({ dryRun: true, prompt: result.prompt }, null, 2);
+  if (result.showPrompt) {
+    return JSON.stringify({ showPrompt: true, prompt: result.prompt }, null, 2);
   }
   return JSON.stringify(result.data, null, 2);
 }
@@ -148,8 +148,8 @@ export function formatResultJson(result: AgentRunResult): string {
 // ── YAML formatter ────────────────────────────────────────────────────────────
 
 export function formatResultYaml(result: AgentRunResult): string {
-  if (result.dryRun) {
-    return yaml.dump({ dryRun: true, prompt: result.prompt });
+  if (result.showPrompt) {
+    return yaml.dump({ showPrompt: true, prompt: result.prompt });
   }
   return yaml.dump(result.data, { lineWidth: 120 });
 }

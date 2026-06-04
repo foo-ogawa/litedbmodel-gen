@@ -47,7 +47,7 @@ const handlers: CommandHandlers = {
     await commandAudit(target, {
       adapter:      opts.adapter as string | undefined,
       model:        opts.model as string | undefined,
-      dryRun:       opts.dryRun as boolean | undefined,
+      showPrompt:   opts.showPrompt as boolean | undefined,
       failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
       output:       opts.output as string | undefined,
       reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
@@ -61,7 +61,7 @@ const handlers: CommandHandlers = {
       models:       opts.models as string | undefined,
       adapter:      opts.adapter as string | undefined,
       model:        opts.model as string | undefined,
-      dryRun:       opts.dryRun as boolean | undefined,
+      showPrompt:   opts.showPrompt as boolean | undefined,
       failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
       output:       opts.output as string | undefined,
       reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,

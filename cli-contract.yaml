@@ -150,8 +150,8 @@ command_sets:
             schema:
               type: string
 
-          - name: dry-run
-            description: Output the constructed prompt without calling the LLM.
+          - name: show-prompt
+            description: Output the constructed prompt without calling the LLM API.
             schema:
               type: boolean
               default: false
@@ -197,7 +197,7 @@ command_sets:
           sideEffectNote: >-
             Makes network calls to the configured LLM provider when adapter is
             not "mock". Writes to the filesystem only when --output is specified.
-          safeDryRunOption: dry-run
+          safeDryRunOption: show-prompt
           expectedDurationMs: 120000
           retryableExitCodes: [1, 12]
 
@@ -302,8 +302,8 @@ command_sets:
             schema:
               type: string
 
-          - name: dry-run
-            description: Output the constructed prompt without calling the LLM.
+          - name: show-prompt
+            description: Output the constructed prompt without calling the LLM API.
             schema:
               type: boolean
               default: false
@@ -350,7 +350,7 @@ command_sets:
             The agent reads project files and writes implementation code
             directly to the target source file(s). Uses an agentic adapter
             (claude/cursor) with file read/write tools.
-          safeDryRunOption: dry-run
+          safeDryRunOption: show-prompt
           expectedDurationMs: 120000
           retryableExitCodes: [1, 12]
 

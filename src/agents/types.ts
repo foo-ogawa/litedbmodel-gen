@@ -24,7 +24,7 @@ export interface AgentConfig {
 
 export interface AgentOptions {
   /** When true, return the constructed prompt without calling the LLM. */
-  dryRun?: boolean;
+  showPrompt?: boolean;
   /** Minimum finding severity that triggers exit code 10. */
   failOn?: "warning" | "error" | "critical";
   /** File path to write structured progress logs. */
@@ -94,13 +94,13 @@ export type AgentResultData = AuditResultData | ImplementResultData;
 
 export interface AgentRunResult {
   taskId: TaskId;
-  /** Parsed result data; null when dryRun or status !== "success". */
+  /** Parsed result data; null when showPrompt or status !== "success". */
   data: AgentResultData | null;
   /** Raw LLM response text. */
   raw: string;
-  /** The prompt / context that was sent (or would be sent in dry-run). */
+  /** The prompt / context that was sent (or would be sent with --show-prompt). */
   prompt: string;
-  dryRun: boolean;
+  showPrompt: boolean;
   status: "success" | "error" | "escalation" | "validation_error";
   errorMessage?: string;
   followUpsUsed: number;
