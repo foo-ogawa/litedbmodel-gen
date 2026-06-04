@@ -103,7 +103,7 @@ async function createAdapter(
  * @param userRequest  The full context prompt built by context-builder.ts.
  * @param taskId       One of the two task identifiers in the DSL.
  * @param config       Adapter / model configuration.
- * @param options      dryRun flag and failOn threshold (used by formatter).
+ * @param options      showPrompt flag and failOn threshold (used by formatter).
  */
 export async function runAgentTask(
   userRequest: string,
@@ -146,8 +146,8 @@ export async function runAgentTask(
   });
   const registries = ctx.registries;
 
-  // Dry-run: build the full prompt (system + user) without calling the LLM.
-  if (options.dryRun) {
+  // Show-prompt: build the full prompt (system + user) without calling the LLM.
+  if (options.showPrompt) {
     const task = (registries.taskRegistry as Record<string, unknown>)[taskId];
     const targetAgent = (task as { target_agent?: string })?.target_agent;
     const agent = targetAgent
@@ -175,7 +175,7 @@ export async function runAgentTask(
       data: null,
       raw: "",
       prompt: fullPrompt,
-      dryRun: true,
+      showPrompt: true,
       status: "success",
       followUpsUsed: 0,
       retriesUsed: 0,
@@ -218,7 +218,7 @@ export async function runAgentTask(
       data: outcome.data as AgentResultData,
       raw: outcome.raw ?? "",
       prompt: userRequest,
-      dryRun: false,
+      showPrompt: false,
       status: "success",
       followUpsUsed: follow_ups_used,
       retriesUsed: retries_used,
@@ -232,7 +232,7 @@ export async function runAgentTask(
       data: null,
       raw: outcome.raw ?? "",
       prompt: userRequest,
-      dryRun: false,
+      showPrompt: false,
       status: "validation_error",
       errorMessage: outcome.errors.join("; "),
       followUpsUsed: follow_ups_used,
@@ -247,7 +247,7 @@ export async function runAgentTask(
       data: null,
       raw: outcome.raw ?? "",
       prompt: userRequest,
-      dryRun: false,
+      showPrompt: false,
       status: "escalation",
       errorMessage: outcome.reason,
       followUpsUsed: follow_ups_used,
@@ -261,7 +261,7 @@ export async function runAgentTask(
     data: null,
     raw: "",
     prompt: userRequest,
-    dryRun: false,
+    showPrompt: false,
     status: "error",
     errorMessage: typeof outcome.message === "string" ? outcome.message : "Unknown agent error",
     followUpsUsed: follow_ups_used,

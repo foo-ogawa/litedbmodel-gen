@@ -31,7 +31,7 @@ export interface ImplementCommandOpts {
   /** Model override for the selected adapter */
   model?: string;
   /** Return prompt without calling the LLM */
-  dryRun?: boolean;
+  showPrompt?: boolean;
   /** Minimum severity that causes exit 10 */
   failOn?: "warning" | "error" | "critical";
   /** Write report to file instead of stdout */
@@ -97,7 +97,7 @@ export async function commandImplement(
   };
 
   const agentOpts: AgentOptions = {
-    dryRun: opts.dryRun ?? false,
+    showPrompt: opts.showPrompt ?? false,
     failOn: opts.failOn ?? "error",
     logFile: opts.logFile,
   };

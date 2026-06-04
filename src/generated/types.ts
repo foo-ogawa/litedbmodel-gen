@@ -18,7 +18,7 @@ export interface AuditArgs {
 export interface AuditOptions {
   adapter?: "mock" | "cursor" | "claude" | "openai" | "gemini";
   model?: string;
-  dryRun?: boolean;
+  showPrompt?: boolean;
   failOn?: "warning" | "error" | "critical";
   output?: string;
   reportFormat?: "json" | "text" | "yaml";
@@ -44,7 +44,7 @@ export interface ImplementOptions {
   models?: string;
   adapter?: "mock" | "cursor" | "claude" | "openai" | "gemini";
   model?: string;
-  dryRun?: boolean;
+  showPrompt?: boolean;
   failOn?: "warning" | "error" | "critical";
   output?: string;
   reportFormat?: "json" | "text" | "yaml";

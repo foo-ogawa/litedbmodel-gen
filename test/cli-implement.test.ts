@@ -70,23 +70,23 @@ describe('litedbmodel-gen implement', () => {
     expect(result.stdout).toContain('missing_description');
   });
 
-  // ── dry-run ────────────────────────────────────────────
+  // ── show-prompt ────────────────────────────────────────
 
-  it('dry-run outputs prompt without calling LLM', () => {
+  it('show-prompt outputs prompt without calling LLM', () => {
     const result = run(
-      'implement "Add findByEmail method" --dry-run',
+      'implement "Add findByEmail method" --show-prompt',
     );
     expect(result.exitCode).toBe(0);
 
     const parsed = JSON.parse(result.stdout);
-    expect(parsed.dryRun).toBe(true);
+    expect(parsed.showPrompt).toBe(true);
     expect(parsed.prompt).toContain('Add findByEmail method');
     expect(parsed.prompt).toContain('models/**/*.ts');
   });
 
-  it('dry-run prompt includes --target when specified', () => {
+  it('show-prompt prompt includes --target when specified', () => {
     const result = run(
-      'implement "Add findByEmail" --target src/services/user.service.ts --dry-run',
+      'implement "Add findByEmail" --target src/services/user.service.ts --show-prompt',
     );
     expect(result.exitCode).toBe(0);
 
@@ -95,9 +95,9 @@ describe('litedbmodel-gen implement', () => {
     expect(parsed.prompt).toContain('Read the target file');
   });
 
-  it('dry-run prompt does not include target path in parameters when --target is omitted', () => {
+  it('show-prompt prompt does not include target path in parameters when --target is omitted', () => {
     const result = run(
-      'implement "Add findByEmail" --dry-run',
+      'implement "Add findByEmail" --show-prompt',
     );
     expect(result.exitCode).toBe(0);
 
@@ -105,9 +105,9 @@ describe('litedbmodel-gen implement', () => {
     expect(parsed.prompt).not.toContain('**Target file**');
   });
 
-  it('dry-run prompt includes custom --models glob', () => {
+  it('show-prompt prompt includes custom --models glob', () => {
     const result = run(
-      'implement "Add findByEmail" --models "src/db/**/*.model.ts" --dry-run',
+      'implement "Add findByEmail" --models "src/db/**/*.model.ts" --show-prompt',
     );
     expect(result.exitCode).toBe(0);
 

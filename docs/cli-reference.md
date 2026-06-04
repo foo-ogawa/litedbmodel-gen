@@ -108,7 +108,7 @@ litedbmodel-gen audit src/services/user-service.ts --fail-on warning --report-fo
 |---|---|---|---|---|
 | `--adapter` |  | No | `"mock"` | LLM adapter to use for the audit. |
 | `--model` |  | No |  | Model name override for the selected adapter. |
-| `--dry-run` |  | No | `false` | Output the constructed prompt without calling the LLM. |
+| `--show-prompt` |  | No | `false` | Output the constructed prompt without calling the LLM API. |
 | `--fail-on` |  | No | `"error"` | Minimum finding severity that causes exit code 10. Findings below this threshold are still reported. |
 | `--output` | -o | No |  | Write the report to a file instead of stdout. |
 | `--report-format` |  | No | `"json"` | Output format for the audit report. |
@@ -151,7 +151,7 @@ x-agent:
   sideEffects: 
     - network
   sideEffectNote: Makes network calls to the configured LLM provider when adapter is not "mock". Writes to the filesystem only when --output is specified.
-  safeDryRunOption: dry-run
+  safeDryRunOption: show-prompt
   expectedDurationMs: 120000
   retryableExitCodes: 
     - 1
@@ -189,7 +189,7 @@ litedbmodel-gen implement "Add bulk upsert for order items" --target src/service
 | `--models` |  | No | `"models/**/*.ts"` | Glob pattern for model definition files. The agent reads these to understand available models, columns, and relations. |
 | `--adapter` |  | No | `"mock"` | LLM adapter to use for code generation. |
 | `--model` |  | No |  | Model name override for the selected adapter. |
-| `--dry-run` |  | No | `false` | Output the constructed prompt without calling the LLM. |
+| `--show-prompt` |  | No | `false` | Output the constructed prompt without calling the LLM API. |
 | `--fail-on` |  | No | `"error"` | Minimum finding severity that causes exit code 10. Design concerns (info/warning) are still reported at exit 0. |
 | `--output` | -o | No |  | Write the report to a file instead of stdout. |
 | `--report-format` |  | No | `"json"` | Output format for the implementation report. |
@@ -233,7 +233,7 @@ x-agent:
     - network
     - filesystem_write
   sideEffectNote: The agent reads project files and writes implementation code directly to the target source file(s). Uses an agentic adapter (claude/cursor) with file read/write tools.
-  safeDryRunOption: dry-run
+  safeDryRunOption: show-prompt
   expectedDurationMs: 120000
   retryableExitCodes: 
     - 1
