@@ -60,12 +60,16 @@
     "@openai/agents": {
       "optional": true
     },
+    "@google/adk": {
+      "optional": true
+    },
     "@google/genai": {
       "optional": true
     }
   },
   "optionalDependencies": {
     "@anthropic-ai/claude-agent-sdk": ">=0.2.0",
+    "@google/adk": ">=1.2.0",
     "@google/genai": ">=2.0.0",
     "@openai/agents": ">=0.10.0"
   },

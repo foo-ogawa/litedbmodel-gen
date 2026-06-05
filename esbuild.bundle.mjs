@@ -9,8 +9,8 @@ const externalPackages = [
   // LLM SDKs
   "@anthropic-ai/claude-agent-sdk",
   "@anthropic-ai/sdk",
-  "@cursor/sdk",
   "@openai/agents",
+  "@google/adk",
   "@google/genai",
   // Native modules
   "better-sqlite3",
