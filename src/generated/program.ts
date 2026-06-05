@@ -7,6 +7,7 @@ export interface CommandHandlers {
   audit: (target: string | undefined, options: { adapter?: string; model?: string; showPrompt?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string }, parentOpts: Record<string, unknown>) => Promise<void | string>;
   implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; showPrompt?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string }, parentOpts: Record<string, unknown>) => Promise<void | string>;
   agents: (options: { format?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
+  insights: (options: { format?: string; projectRoot?: string; config?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
 }
 
 export function createProgram(
@@ -68,6 +69,16 @@ export function createProgram(
         return;
       }
       await handlers.implement(description, opts, cmd.optsWithGlobals());
+    });
+
+  program
+    .command("insights")
+    .description("Export SQL schema → model file edges as ExternalInsight JSON.")
+    .option("--format <format>", "Output format (json only).", "json")
+    .option("--project-root <path>", "Project root directory containing embedoc.config.yaml.", ".")
+    .option("-c, --config <path>", "Path to embedoc.config.yaml.")
+    .action(async (opts, cmd) => {
+      await handlers.insights(opts, cmd.optsWithGlobals());
     });
 
   program
