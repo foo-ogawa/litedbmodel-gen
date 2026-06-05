@@ -11,7 +11,6 @@ const externalPackages = [
   "@anthropic-ai/sdk",
   "@openai/agents",
   "@google/adk",
-  "@google/genai",
   // Native modules
   "better-sqlite3",
   // Peer dependencies

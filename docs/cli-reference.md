@@ -164,7 +164,7 @@ x-agent:
 
 Implement a feature using litedbmodel best practices.
 
-Reads the project's model definitions, then implements the described feature directly in the target source file(s), applying litedbmodel best-practice patterns: createMany for batch inserts, upsert with onConflict/onConflictUpdate for idempotent writes, forUpdate for concurrent-safe reads, and DBModel.transaction for multi-step operations. Avoids all eight common litedbmodel anti-patterns. Requires an agentic adapter (claude/cursor) that can read and write project files.
+Reads the project's model definitions, then implements the described feature directly in the target source file(s), applying litedbmodel best-practice patterns: createMany for batch inserts, upsert with onConflict/onConflictUpdate for idempotent writes, forUpdate for concurrent-safe reads, and DBModel.transaction for multi-step operations. Avoids all eight common litedbmodel anti-patterns. Requires an agentic adapter (claude) that can read and write project files.
 
 **Usage:**
 
@@ -232,7 +232,7 @@ x-agent:
   sideEffects: 
     - network
     - filesystem_write
-  sideEffectNote: The agent reads project files and writes implementation code directly to the target source file(s). Uses an agentic adapter (claude/cursor) with file read/write tools.
+  sideEffectNote: The agent reads project files and writes implementation code directly to the target source file(s). Uses an agentic adapter (claude) with file read/write tools.
   safeDryRunOption: show-prompt
   expectedDurationMs: 120000
   retryableExitCodes: 

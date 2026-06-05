@@ -71,7 +71,7 @@ export async function commandImplement(
   });
 
   // Assemble agent configuration.
-  // cwd is passed so the agentic adapter (claude/cursor) operates
+  // cwd is passed so the agentic adapter (claude) operates
   // in the user's project directory and can read/write files directly.
   const adapterName = opts.adapter ?? "mock";
   const agentConfig: AgentConfig = {

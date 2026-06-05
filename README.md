@@ -38,7 +38,7 @@ npx litedbmodel-gen audit src/services/ --adapter claude
 
 ## LLM-Powered Commands
 
-litedbmodel-gen includes two LLM-powered commands that understand the litedbmodel API and enforce correct usage patterns. These commands are backed by [agent-contracts-runtime](https://www.npmjs.com/package/agent-contracts-runtime) and require an LLM adapter (`--adapter claude`, `openai`, `gemini`, or `cursor`).
+litedbmodel-gen includes two LLM-powered commands that understand the litedbmodel API and enforce correct usage patterns. These commands are backed by [agent-contracts-runtime](https://www.npmjs.com/package/agent-contracts-runtime) and require an LLM adapter (`--adapter claude`, `openai`, or `gemini`).
 
 ### Why
 
@@ -87,7 +87,7 @@ npx litedbmodel-gen implement "..." --target src/services/foo.ts --adapter claud
 |--------|---------|-------------|
 | `--target <path>` | — | Target source file to create or edit |
 | `--models <glob>` | `models/**/*.ts` | Glob pattern for model definition files |
-| `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `cursor`, `mock` |
+| `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `mock` |
 | `--model <name>` | — | Model name override for the adapter |
 | `--show-prompt` | `false` | Output the prompt without calling the LLM |
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
@@ -113,7 +113,7 @@ npx litedbmodel-gen audit src/ --adapter claude --report-format text
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `cursor`, `mock` |
+| `--adapter <name>` | `mock` | LLM adapter: `claude`, `openai`, `gemini`, `mock` |
 | `--model <name>` | — | Model name override for the adapter |
 | `--show-prompt` | `false` | Output the prompt without calling the LLM |
 | `--report-format` | `json` | Output format: `json`, `text`, `yaml` |
@@ -175,7 +175,6 @@ schema.sql  ──>  embedoc generate + build  ──>  models/*.ts
 | `ANTHROPIC_API_KEY` | `claude` |
 | `OPENAI_API_KEY` | `openai` |
 | `GEMINI_API_KEY` | `gemini` |
-| `CURSOR_API_KEY` | `cursor` |
 
 ---
 

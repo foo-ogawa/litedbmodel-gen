@@ -142,7 +142,7 @@ command_sets:
             description: LLM adapter to use for the audit.
             schema:
               type: string
-              enum: [mock, cursor, claude, openai, gemini]
+              enum: [mock, claude, openai, gemini]
               default: mock
 
           - name: model
@@ -247,7 +247,7 @@ command_sets:
           onConflict/onConflictUpdate for idempotent writes, forUpdate for
           concurrent-safe reads, and DBModel.transaction for multi-step
           operations. Avoids all eight common litedbmodel anti-patterns.
-          Requires an agentic adapter (claude/cursor) that can read and
+          Requires an agentic adapter (claude) that can read and
           write project files.
         usage:
           - >-
@@ -294,7 +294,7 @@ command_sets:
             description: LLM adapter to use for code generation.
             schema:
               type: string
-              enum: [mock, cursor, claude, openai, gemini]
+              enum: [mock, claude, openai, gemini]
               default: mock
 
           - name: model
@@ -349,7 +349,7 @@ command_sets:
           sideEffectNote: >-
             The agent reads project files and writes implementation code
             directly to the target source file(s). Uses an agentic adapter
-            (claude/cursor) with file read/write tools.
+            (claude) with file read/write tools.
           safeDryRunOption: show-prompt
           expectedDurationMs: 120000
           retryableExitCodes: [1, 12]
