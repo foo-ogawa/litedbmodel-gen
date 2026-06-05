@@ -10,7 +10,7 @@ export type TaskId =
 // ── Configuration & option interfaces ────────────────────────────────────────
 
 export interface AgentConfig {
-  /** LLM adapter name: mock | cursor | claude | openai | gemini */
+  /** LLM adapter name: mock | claude | openai | gemini */
   adapter?: string;
   /** Optional model override for the selected adapter. */
   model?: string;

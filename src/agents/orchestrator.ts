@@ -40,16 +40,6 @@ async function createAdapter(
         });
       }
 
-      case "cursor": {
-        const m = await import(`${PKG}/adapters/cursor-sdk`);
-        const apiKey = process.env["CURSOR_API_KEY"];
-        return m.CursorSdkAdapter.create({
-          apiKey,
-          ...(config.model ? { model: config.model } : {}),
-          ...(config.cwd ? { cwd: config.cwd } : {}),
-        });
-      }
-
       case "claude": {
         const m = await import(`${PKG}/adapters/claude-agent-sdk`);
         return new m.ClaudeAgentSdkAdapter({
@@ -66,8 +56,8 @@ async function createAdapter(
       }
 
       case "gemini": {
-        const m = await import(`${PKG}/adapters/gemini-sdk`);
-        return new m.GeminiSdkAdapter({
+        const m = await import(`${PKG}/adapters/adk-sdk`);
+        return new m.AdkSdkAdapter({
           apiKey: process.env["GEMINI_API_KEY"],
           ...(config.model ? { model: config.model } : {}),
         });
@@ -75,7 +65,7 @@ async function createAdapter(
 
       default:
         throw Object.assign(
-          new Error(`Unknown adapter: "${adapterName}". Valid values: mock, cursor, claude, openai, gemini`),
+          new Error(`Unknown adapter: "${adapterName}". Valid values: mock, claude, openai, gemini`),
           { exitCode: EXIT_ADAPTER_ERROR },
         );
     }
