@@ -1,6 +1,6 @@
 {
   "name": "litedbmodel-gen",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "embedoc-based model code generator for litedbmodel — generates TypeScript column definitions from SQL DDL (PostgreSQL/MySQL/SQLite)",
   "type": "module",
   "main": "dist/index.js",
@@ -75,10 +75,12 @@
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.165",
+    "@google/adk": "^1.2.0",
+    "@openai/agents": "^0.10.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.3.3",
     "agent-contracts": "^0.33.1",
-    "agent-contracts-runtime": "^0.36.0",
+    "agent-contracts-runtime": "^0.36.2",
     "cli-contracts": "^0.32.0",
     "commander": "^14.0.3",
     "embedoc": "^0.11.0",
