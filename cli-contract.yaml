@@ -392,6 +392,63 @@ command_sets:
             stderr:
               format: json
 
+      # ── insights ──────────────────────────────────────
+      insights:
+        summary: Export SQL schema → model file edges as ExternalInsight JSON.
+        description: >-
+          Reads embedoc.config.yaml datasources and maps each SQL DDL table
+          to its generated model file for agent-contracts-analyzer integration.
+        usage:
+          - litedbmodel-gen insights --format json
+          - litedbmodel-gen insights --format json --project-root .
+          - litedbmodel-gen insights --format json --config embedoc.config.yaml
+
+        options:
+          - name: format
+            aliases: [f]
+            description: "Output format (json only)."
+            value_name: format
+            schema:
+              type: string
+              default: json
+              enum: [json]
+
+          - name: project-root
+            description: Project root directory containing embedoc.config.yaml.
+            value_name: path
+            schema:
+              type: string
+              default: .
+
+          - name: config
+            aliases: [c]
+            description: Path to embedoc.config.yaml.
+            value_name: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: true
+              media_type: application/yaml
+              encoding: utf-8
+
+        exits:
+          '0':
+            description: ExternalInsight JSON emitted to stdout.
+            stdout:
+              format: json
+
+          '1':
+            description: Export failed (config not found, unreadable SQL, or internal error).
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects: []
+
       # ── agents ──────────────────────────────────────────
       agents:
         summary: Output the full resolved agent DSL as structured data.

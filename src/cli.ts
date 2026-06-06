@@ -6,6 +6,7 @@ import yaml from 'js-yaml';
 import { createProgram, type CommandHandlers } from './generated/program.js';
 import { commandAudit } from './commands/audit.js';
 import { commandImplement } from './commands/implement.js';
+import { commandInsights } from './commands/insights.js';
 import { resolvedDsl } from './generated/dsl/index.js';
 
 const require = createRequire(import.meta.url);
@@ -80,6 +81,20 @@ const handlers: CommandHandlers = {
       }
     } catch (err) {
       console.error(`Failed to output DSL: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  },
+
+  // ── insights ───────────────────────────────────────────────────────────────
+  insights: async (opts) => {
+    try {
+      await commandInsights({
+        format: opts.format as string | undefined,
+        projectRoot: opts.projectRoot as string | undefined,
+        config: opts.config as string | undefined,
+      });
+    } catch (error) {
+      console.error('Insights failed:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
   },
