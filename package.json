@@ -52,8 +52,8 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.3.3",
-    "agent-contracts": "^0.33.1",
+    "@types/node": "^25.9.2",
+    "agent-contracts": "^0.34.11",
     "agent-contracts-runtime": "^0.36.4",
     "cli-contracts": "^0.32.0",
     "commander": "^14.0.3",
@@ -61,9 +61,9 @@
     "esbuild": "^0.28.0",
     "js-yaml": "^4.1.1",
     "node-sql-parser": "^5.4.0",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.0",
-    "vitest": "^4.1.7",
-    "zod": "^4.0.0"
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "zod": "^4.4.3"
   }
 }
