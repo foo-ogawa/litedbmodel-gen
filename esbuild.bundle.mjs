@@ -6,7 +6,8 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const minify = process.argv.includes("--minify");
 
 const externalPackages = [
-  // LLM SDKs
+  // Runtime + LLM SDKs
+  "agent-contracts-runtime",
   "@anthropic-ai/claude-agent-sdk",
   "@anthropic-ai/sdk",
   "@openai/agents",
@@ -19,23 +20,7 @@ const externalPackages = [
 
 const resolveRuntimeDynamicImports = {
   name: "resolve-runtime-dynamic-imports",
-  setup(build) {
-    build.onLoad({ filter: /agents[\\/]orchestrator\.ts$/ }, async (args) => {
-      let contents = readFileSync(args.path, "utf8");
-      // litedbmodel-gen uses: const PKG = "agent-contracts-runtime"
-      // followed by: await import(PKG) and template literal adapter imports
-      // Replace dynamic imports with literal strings
-      contents = contents.replace(
-        /await import\(PKG\)/g,
-        'await import("agent-contracts-runtime")',
-      );
-      contents = contents.replace(
-        /await import\(`\$\{PKG\}\/adapters\/([^`]+)`\)/g,
-        'await import("agent-contracts-runtime/adapters/$1")',
-      );
-      return { contents, loader: "ts" };
-    });
-  },
+  setup(_build) {},
 };
 
 const inlineBuildTimeConstants = {
