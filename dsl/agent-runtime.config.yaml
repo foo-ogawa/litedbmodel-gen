@@ -1,5 +1,8 @@
 dsl: ./litedbmodel-gen-dsl.yaml
 generated_dir: ../src/generated/dsl
+bindings:
+  - ./bindings/runtime.yaml
+active_guardrail_policy: litedbmodel-safety-policy
 
 recovery:
   max_follow_ups: 3

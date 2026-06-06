@@ -1,0 +1,6 @@
+software: litedbmodel-gen
+version: 1
+
+# output-schema-conformance is a semantic guardrail enforced at runtime via Zod
+# handoff schema validation. No command/file/content matcher applies.
+guardrail_impl: {}
