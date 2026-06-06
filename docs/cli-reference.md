@@ -10,6 +10,7 @@ embedoc-based model code generator for litedbmodel. Parses SQL DDL (PostgreSQL /
   - [init](#litedbmodel-gen-init)
   - [audit](#litedbmodel-gen-audit)
   - [implement](#litedbmodel-gen-implement)
+  - [insights](#litedbmodel-gen-insights)
   - [agents](#litedbmodel-gen-agents)
 
 ---
@@ -120,6 +121,212 @@ litedbmodel-gen audit src/services/user-service.ts --fail-on warning --report-fo
 
 - **stdout:** format=`json`
 
+  | Property | Type | Required | Description |
+  |---|---|---|---|
+  | `summary` | `string` | Yes | One-paragraph summary of the audit result. |
+  | `riskLevel` | `"low" \| "medium" \| "high" \| "critical"` | Yes | Overall risk level reflecting the highest-severity finding. |
+  | `findings` | `object[]` | Yes |  |
+  | `findings[].id` | `string` | No | Optional stable identifier for the finding. |
+  | `findings[].severity` | `"info" \| "warning" \| "error" \| "critical"` | Yes |  |
+  | `findings[].category` | `string` | Yes | Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE). |
+  | `findings[].target` | `string` | No | Symbol, class, or function where the finding applies. |
+  | `findings[].location` | `string` | No | File path and optional line reference. |
+  | `findings[].message` | `string` | Yes | Human-readable description of the finding. |
+  | `findings[].recommendation` | `string` | No | Actionable fix referencing the correct litedbmodel API. |
+  | `findings[].confidence` | `number (min: 0, max: 1)` | No | Model confidence in the finding (0–1). |
+  | `findings[].evidence` | `object[]` | No |  |
+  | `findings[].evidence[].type` | `string` | Yes | Evidence category (e.g. code_snippet, log_line, metric). |
+  | `findings[].evidence[].content` | `string` | Yes | The evidence body. |
+  | `findings[].evidence[].source` | `string` | No | File path, URL, or identifier of the evidence source. |
+  | `findings[].details` | `object` | No | Arbitrary additional structured detail. |
+  | `recommendedActions` | `object[]` | No |  |
+  | `recommendedActions[].kind` | `enum(6 values)` | Yes |  |
+  | `recommendedActions[].title` | `string` | Yes | Short imperative label for the action. |
+  | `recommendedActions[].command` | `string` | No | Shell command to run (for kind=run_command). |
+  | `recommendedActions[].target` | `string` | No | File or symbol to edit/review. |
+  | `recommendedActions[].rationale` | `string` | No | Why this action is recommended. |
+  | `metadata` | `object` | No |  |
+  | `metadata.tool` | `string` | No |  |
+  | `metadata.command` | `string` | No |  |
+  | `metadata.version` | `string` | No |  |
+  | `metadata.generatedAt` | `string` | No |  |
+  | `metadata.adapter` | `string` | No |  |
+  | `metadata.model` | `string` | No |  |
+
+  <details>
+  <summary>JSON Schema</summary>
+
+  ```json
+  {
+    "type": "object",
+    "required": [
+      "summary",
+      "riskLevel",
+      "findings"
+    ],
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "One-paragraph summary of the audit result."
+      },
+      "riskLevel": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "description": "Overall risk level reflecting the highest-severity finding."
+      },
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "severity",
+            "category",
+            "message"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional stable identifier for the finding."
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warning",
+                "error",
+                "critical"
+              ]
+            },
+            "category": {
+              "type": "string",
+              "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+            },
+            "target": {
+              "type": "string",
+              "description": "Symbol, class, or function where the finding applies."
+            },
+            "location": {
+              "type": "string",
+              "description": "File path and optional line reference."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable description of the finding."
+            },
+            "recommendation": {
+              "type": "string",
+              "description": "Actionable fix referencing the correct litedbmodel API."
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Model confidence in the finding (0–1)."
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "content"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "The evidence body."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "File path, URL, or identifier of the evidence source."
+                  }
+                }
+              }
+            },
+            "details": {
+              "type": "object",
+              "description": "Arbitrary additional structured detail."
+            }
+          }
+        }
+      },
+      "recommendedActions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "kind",
+            "title"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "run_command",
+                "edit_file",
+                "review",
+                "confirm",
+                "block",
+                "ignore"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "description": "Short imperative label for the action."
+            },
+            "command": {
+              "type": "string",
+              "description": "Shell command to run (for kind=run_command)."
+            },
+            "target": {
+              "type": "string",
+              "description": "File or symbol to edit/review."
+            },
+            "rationale": {
+              "type": "string",
+              "description": "Why this action is recommended."
+            }
+          }
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+  ```
+
+  </details>
+
 **Exit 1:** General error (unexpected exception or I/O failure).
 
 - **stderr:** format=`text`
@@ -131,6 +338,212 @@ litedbmodel-gen audit src/services/user-service.ts --fail-on warning --report-fo
 **Exit 10:** Blocking findings detected at or above the --fail-on threshold.
 
 - **stdout:** format=`json`
+
+  | Property | Type | Required | Description |
+  |---|---|---|---|
+  | `summary` | `string` | Yes | One-paragraph summary of the audit result. |
+  | `riskLevel` | `"low" \| "medium" \| "high" \| "critical"` | Yes | Overall risk level reflecting the highest-severity finding. |
+  | `findings` | `object[]` | Yes |  |
+  | `findings[].id` | `string` | No | Optional stable identifier for the finding. |
+  | `findings[].severity` | `"info" \| "warning" \| "error" \| "critical"` | Yes |  |
+  | `findings[].category` | `string` | Yes | Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE). |
+  | `findings[].target` | `string` | No | Symbol, class, or function where the finding applies. |
+  | `findings[].location` | `string` | No | File path and optional line reference. |
+  | `findings[].message` | `string` | Yes | Human-readable description of the finding. |
+  | `findings[].recommendation` | `string` | No | Actionable fix referencing the correct litedbmodel API. |
+  | `findings[].confidence` | `number (min: 0, max: 1)` | No | Model confidence in the finding (0–1). |
+  | `findings[].evidence` | `object[]` | No |  |
+  | `findings[].evidence[].type` | `string` | Yes | Evidence category (e.g. code_snippet, log_line, metric). |
+  | `findings[].evidence[].content` | `string` | Yes | The evidence body. |
+  | `findings[].evidence[].source` | `string` | No | File path, URL, or identifier of the evidence source. |
+  | `findings[].details` | `object` | No | Arbitrary additional structured detail. |
+  | `recommendedActions` | `object[]` | No |  |
+  | `recommendedActions[].kind` | `enum(6 values)` | Yes |  |
+  | `recommendedActions[].title` | `string` | Yes | Short imperative label for the action. |
+  | `recommendedActions[].command` | `string` | No | Shell command to run (for kind=run_command). |
+  | `recommendedActions[].target` | `string` | No | File or symbol to edit/review. |
+  | `recommendedActions[].rationale` | `string` | No | Why this action is recommended. |
+  | `metadata` | `object` | No |  |
+  | `metadata.tool` | `string` | No |  |
+  | `metadata.command` | `string` | No |  |
+  | `metadata.version` | `string` | No |  |
+  | `metadata.generatedAt` | `string` | No |  |
+  | `metadata.adapter` | `string` | No |  |
+  | `metadata.model` | `string` | No |  |
+
+  <details>
+  <summary>JSON Schema</summary>
+
+  ```json
+  {
+    "type": "object",
+    "required": [
+      "summary",
+      "riskLevel",
+      "findings"
+    ],
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "One-paragraph summary of the audit result."
+      },
+      "riskLevel": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "description": "Overall risk level reflecting the highest-severity finding."
+      },
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "severity",
+            "category",
+            "message"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional stable identifier for the finding."
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warning",
+                "error",
+                "critical"
+              ]
+            },
+            "category": {
+              "type": "string",
+              "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+            },
+            "target": {
+              "type": "string",
+              "description": "Symbol, class, or function where the finding applies."
+            },
+            "location": {
+              "type": "string",
+              "description": "File path and optional line reference."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable description of the finding."
+            },
+            "recommendation": {
+              "type": "string",
+              "description": "Actionable fix referencing the correct litedbmodel API."
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Model confidence in the finding (0–1)."
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "content"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "The evidence body."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "File path, URL, or identifier of the evidence source."
+                  }
+                }
+              }
+            },
+            "details": {
+              "type": "object",
+              "description": "Arbitrary additional structured detail."
+            }
+          }
+        }
+      },
+      "recommendedActions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "kind",
+            "title"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "run_command",
+                "edit_file",
+                "review",
+                "confirm",
+                "block",
+                "ignore"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "description": "Short imperative label for the action."
+            },
+            "command": {
+              "type": "string",
+              "description": "Shell command to run (for kind=run_command)."
+            },
+            "target": {
+              "type": "string",
+              "description": "File or symbol to edit/review."
+            },
+            "rationale": {
+              "type": "string",
+              "description": "Why this action is recommended."
+            }
+          }
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+  ```
+
+  </details>
 
 **Exit 11:** agent-contracts-runtime package is not installed.
 
@@ -201,6 +614,233 @@ litedbmodel-gen implement "Add bulk upsert for order items" --target src/service
 
 - **stdout:** format=`json`
 
+
+  <details>
+  <summary>JSON Schema</summary>
+
+  ```json
+  {
+    "allOf": [
+      {
+        "type": "object",
+        "required": [
+          "summary",
+          "riskLevel",
+          "findings"
+        ],
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "One-paragraph summary of the audit result."
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "description": "Overall risk level reflecting the highest-severity finding."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "severity",
+                "category",
+                "message"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Optional stable identifier for the finding."
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "info",
+                    "warning",
+                    "error",
+                    "critical"
+                  ]
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+                },
+                "target": {
+                  "type": "string",
+                  "description": "Symbol, class, or function where the finding applies."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "File path and optional line reference."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable description of the finding."
+                },
+                "recommendation": {
+                  "type": "string",
+                  "description": "Actionable fix referencing the correct litedbmodel API."
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Model confidence in the finding (0–1)."
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "content"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "The evidence body."
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "File path, URL, or identifier of the evidence source."
+                      }
+                    }
+                  }
+                },
+                "details": {
+                  "type": "object",
+                  "description": "Arbitrary additional structured detail."
+                }
+              }
+            }
+          },
+          "recommendedActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "title"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "run_command",
+                    "edit_file",
+                    "review",
+                    "confirm",
+                    "block",
+                    "ignore"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Short imperative label for the action."
+                },
+                "command": {
+                  "type": "string",
+                  "description": "Shell command to run (for kind=run_command)."
+                },
+                "target": {
+                  "type": "string",
+                  "description": "File or symbol to edit/review."
+                },
+                "rationale": {
+                  "type": "string",
+                  "description": "Why this action is recommended."
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "tool": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "adapter": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "object",
+        "required": [
+          "changedFiles"
+        ],
+        "properties": {
+          "changedFiles": {
+            "type": "array",
+            "description": "Files that the agent created or modified.",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "action"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Relative file path that was created or modified."
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "created",
+                    "updated"
+                  ],
+                  "description": "Whether the file was newly created or updated."
+                },
+                "rationale": {
+                  "type": "string",
+                  "description": "Why this file was changed."
+                }
+              }
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "npm packages required but not yet in the project.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional integration instructions."
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+  </details>
+
 **Exit 1:** General error (unexpected exception or I/O failure).
 
 - **stderr:** format=`text`
@@ -212,6 +852,233 @@ litedbmodel-gen implement "Add bulk upsert for order items" --target src/service
 **Exit 10:** Implementation written but design concerns at or above the --fail-on threshold were detected.
 
 - **stdout:** format=`json`
+
+
+  <details>
+  <summary>JSON Schema</summary>
+
+  ```json
+  {
+    "allOf": [
+      {
+        "type": "object",
+        "required": [
+          "summary",
+          "riskLevel",
+          "findings"
+        ],
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "One-paragraph summary of the audit result."
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "description": "Overall risk level reflecting the highest-severity finding."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "severity",
+                "category",
+                "message"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Optional stable identifier for the finding."
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "info",
+                    "warning",
+                    "error",
+                    "critical"
+                  ]
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+                },
+                "target": {
+                  "type": "string",
+                  "description": "Symbol, class, or function where the finding applies."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "File path and optional line reference."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable description of the finding."
+                },
+                "recommendation": {
+                  "type": "string",
+                  "description": "Actionable fix referencing the correct litedbmodel API."
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Model confidence in the finding (0–1)."
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "content"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "The evidence body."
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "File path, URL, or identifier of the evidence source."
+                      }
+                    }
+                  }
+                },
+                "details": {
+                  "type": "object",
+                  "description": "Arbitrary additional structured detail."
+                }
+              }
+            }
+          },
+          "recommendedActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "title"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "run_command",
+                    "edit_file",
+                    "review",
+                    "confirm",
+                    "block",
+                    "ignore"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Short imperative label for the action."
+                },
+                "command": {
+                  "type": "string",
+                  "description": "Shell command to run (for kind=run_command)."
+                },
+                "target": {
+                  "type": "string",
+                  "description": "File or symbol to edit/review."
+                },
+                "rationale": {
+                  "type": "string",
+                  "description": "Why this action is recommended."
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "tool": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "adapter": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "object",
+        "required": [
+          "changedFiles"
+        ],
+        "properties": {
+          "changedFiles": {
+            "type": "array",
+            "description": "Files that the agent created or modified.",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "action"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Relative file path that was created or modified."
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "created",
+                    "updated"
+                  ],
+                  "description": "Whether the file was newly created or updated."
+                },
+                "rationale": {
+                  "type": "string",
+                  "description": "Why this file was changed."
+                }
+              }
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "npm packages required but not yet in the project.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional integration instructions."
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+  </details>
 
 **Exit 11:** agent-contracts-runtime package is not installed.
 
@@ -238,6 +1105,55 @@ x-agent:
   retryableExitCodes: 
     - 1
     - 12
+```
+
+---
+
+### insights
+
+Export SQL schema → model file edges as ExternalInsight JSON.
+
+Reads embedoc.config.yaml datasources and maps each SQL DDL table to its generated model file for agent-contracts-analyzer integration.
+
+**Usage:**
+
+```
+litedbmodel-gen insights --format json
+```
+```
+litedbmodel-gen insights --format json --project-root .
+```
+```
+litedbmodel-gen insights --format json --config embedoc.config.yaml
+```
+
+#### Options
+
+| Option | Aliases | Required | Default | Description |
+|---|---|---|---|---|
+| `--format` | -f | No | `"json"` | Output format (json only). |
+| `--project-root` |  | No | `"."` | Project root directory containing embedoc.config.yaml. |
+| `--config` | -c | No |  | Path to embedoc.config.yaml. |
+
+#### Exit Codes
+
+**Exit 0:** ExternalInsight JSON emitted to stdout.
+
+- **stdout:** format=`json`
+
+**Exit 1:** Export failed (config not found, unreadable SQL, or internal error).
+
+- **stderr:** format=`text`
+
+#### Extensions
+
+```yaml
+x-agent: 
+  riskLevel: low
+  requiresConfirmation: false
+  idempotent: true
+  sideEffects: 
+
 ```
 
 ---
@@ -282,3 +1198,463 @@ x-agent:
 ```
 
 ---
+
+---
+
+## Schemas
+
+### AgentEvidence
+
+Type: `object`
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `type` | `string` | Yes | Evidence category (e.g. code_snippet, log_line, metric). |
+| `content` | `string` | Yes | The evidence body. |
+| `source` | `string` | No | File path, URL, or identifier of the evidence source. |
+
+<details>
+<summary>JSON Schema</summary>
+
+```json
+{
+  "type": "object",
+  "required": [
+    "type",
+    "content"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+    },
+    "content": {
+      "type": "string",
+      "description": "The evidence body."
+    },
+    "source": {
+      "type": "string",
+      "description": "File path, URL, or identifier of the evidence source."
+    }
+  }
+}
+```
+
+</details>
+
+### AgentFinding
+
+Type: `object`
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `id` | `string` | No | Optional stable identifier for the finding. |
+| `severity` | `"info" \| "warning" \| "error" \| "critical"` | Yes |  |
+| `category` | `string` | Yes | Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE). |
+| `target` | `string` | No | Symbol, class, or function where the finding applies. |
+| `location` | `string` | No | File path and optional line reference. |
+| `message` | `string` | Yes | Human-readable description of the finding. |
+| `recommendation` | `string` | No | Actionable fix referencing the correct litedbmodel API. |
+| `confidence` | `number (min: 0, max: 1)` | No | Model confidence in the finding (0–1). |
+| `evidence` | `object[]` | No |  |
+| `evidence[].type` | `string` | Yes | Evidence category (e.g. code_snippet, log_line, metric). |
+| `evidence[].content` | `string` | Yes | The evidence body. |
+| `evidence[].source` | `string` | No | File path, URL, or identifier of the evidence source. |
+| `details` | `object` | No | Arbitrary additional structured detail. |
+
+<details>
+<summary>JSON Schema</summary>
+
+```json
+{
+  "type": "object",
+  "required": [
+    "severity",
+    "category",
+    "message"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional stable identifier for the finding."
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+    },
+    "target": {
+      "type": "string",
+      "description": "Symbol, class, or function where the finding applies."
+    },
+    "location": {
+      "type": "string",
+      "description": "File path and optional line reference."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the finding."
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "Actionable fix referencing the correct litedbmodel API."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Model confidence in the finding (0–1)."
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "content"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+          },
+          "content": {
+            "type": "string",
+            "description": "The evidence body."
+          },
+          "source": {
+            "type": "string",
+            "description": "File path, URL, or identifier of the evidence source."
+          }
+        }
+      }
+    },
+    "details": {
+      "type": "object",
+      "description": "Arbitrary additional structured detail."
+    }
+  }
+}
+```
+
+</details>
+
+### AgentRecommendedAction
+
+Type: `object`
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `enum(6 values)` | Yes |  |
+| `title` | `string` | Yes | Short imperative label for the action. |
+| `command` | `string` | No | Shell command to run (for kind=run_command). |
+| `target` | `string` | No | File or symbol to edit/review. |
+| `rationale` | `string` | No | Why this action is recommended. |
+
+<details>
+<summary>JSON Schema</summary>
+
+```json
+{
+  "type": "object",
+  "required": [
+    "kind",
+    "title"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "run_command",
+        "edit_file",
+        "review",
+        "confirm",
+        "block",
+        "ignore"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Short imperative label for the action."
+    },
+    "command": {
+      "type": "string",
+      "description": "Shell command to run (for kind=run_command)."
+    },
+    "target": {
+      "type": "string",
+      "description": "File or symbol to edit/review."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why this action is recommended."
+    }
+  }
+}
+```
+
+</details>
+
+### AgentAuditResult
+
+Type: `object`
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `summary` | `string` | Yes | One-paragraph summary of the audit result. |
+| `riskLevel` | `"low" \| "medium" \| "high" \| "critical"` | Yes | Overall risk level reflecting the highest-severity finding. |
+| `findings` | `object[]` | Yes |  |
+| `findings[].id` | `string` | No | Optional stable identifier for the finding. |
+| `findings[].severity` | `"info" \| "warning" \| "error" \| "critical"` | Yes |  |
+| `findings[].category` | `string` | Yes | Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE). |
+| `findings[].target` | `string` | No | Symbol, class, or function where the finding applies. |
+| `findings[].location` | `string` | No | File path and optional line reference. |
+| `findings[].message` | `string` | Yes | Human-readable description of the finding. |
+| `findings[].recommendation` | `string` | No | Actionable fix referencing the correct litedbmodel API. |
+| `findings[].confidence` | `number (min: 0, max: 1)` | No | Model confidence in the finding (0–1). |
+| `findings[].evidence` | `object[]` | No |  |
+| `findings[].evidence[].type` | `string` | Yes | Evidence category (e.g. code_snippet, log_line, metric). |
+| `findings[].evidence[].content` | `string` | Yes | The evidence body. |
+| `findings[].evidence[].source` | `string` | No | File path, URL, or identifier of the evidence source. |
+| `findings[].details` | `object` | No | Arbitrary additional structured detail. |
+| `recommendedActions` | `object[]` | No |  |
+| `recommendedActions[].kind` | `enum(6 values)` | Yes |  |
+| `recommendedActions[].title` | `string` | Yes | Short imperative label for the action. |
+| `recommendedActions[].command` | `string` | No | Shell command to run (for kind=run_command). |
+| `recommendedActions[].target` | `string` | No | File or symbol to edit/review. |
+| `recommendedActions[].rationale` | `string` | No | Why this action is recommended. |
+| `metadata` | `object` | No |  |
+| `metadata.tool` | `string` | No |  |
+| `metadata.command` | `string` | No |  |
+| `metadata.version` | `string` | No |  |
+| `metadata.generatedAt` | `string` | No |  |
+| `metadata.adapter` | `string` | No |  |
+| `metadata.model` | `string` | No |  |
+
+<details>
+<summary>JSON Schema</summary>
+
+```json
+{
+  "type": "object",
+  "required": [
+    "summary",
+    "riskLevel",
+    "findings"
+  ],
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "One-paragraph summary of the audit result."
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Overall risk level reflecting the highest-severity finding."
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "severity",
+          "category",
+          "message"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional stable identifier for the finding."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Domain-specific vocabulary label (e.g. LOOP_CREATE, N_PLUS_ONE)."
+          },
+          "target": {
+            "type": "string",
+            "description": "Symbol, class, or function where the finding applies."
+          },
+          "location": {
+            "type": "string",
+            "description": "File path and optional line reference."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable description of the finding."
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Actionable fix referencing the correct litedbmodel API."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Model confidence in the finding (0–1)."
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "content"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Evidence category (e.g. code_snippet, log_line, metric)."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The evidence body."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "File path, URL, or identifier of the evidence source."
+                }
+              }
+            }
+          },
+          "details": {
+            "type": "object",
+            "description": "Arbitrary additional structured detail."
+          }
+        }
+      }
+    },
+    "recommendedActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "title"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run_command",
+              "edit_file",
+              "review",
+              "confirm",
+              "block",
+              "ignore"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Short imperative label for the action."
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to run (for kind=run_command)."
+          },
+          "target": {
+            "type": "string",
+            "description": "File or symbol to edit/review."
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Why this action is recommended."
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "adapter": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+```
+
+</details>
+
+### FileChange
+
+Type: `object`
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `path` | `string` | Yes | Relative file path that was created or modified. |
+| `action` | `"created" \| "updated"` | Yes | Whether the file was newly created or updated. |
+| `rationale` | `string` | No | Why this file was changed. |
+
+<details>
+<summary>JSON Schema</summary>
+
+```json
+{
+  "type": "object",
+  "required": [
+    "path",
+    "action"
+  ],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Relative file path that was created or modified."
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "created",
+        "updated"
+      ],
+      "description": "Whether the file was newly created or updated."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why this file was changed."
+    }
+  }
+}
+```
+
+</details>
+
+### LitedbmodelImplementResult
+
