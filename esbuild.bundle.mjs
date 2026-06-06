@@ -6,8 +6,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const minify = process.argv.includes("--minify");
 
 const externalPackages = [
-  // Runtime + LLM SDKs
-  "agent-contracts-runtime",
+  // LLM SDKs
   "@anthropic-ai/claude-agent-sdk",
   "@anthropic-ai/sdk",
   "@openai/agents",
