@@ -51,6 +51,9 @@ jobs:
       - name: Build
         if: steps.tag.outcome == 'failure'
         run: npm run build
+      - name: Bundle
+        if: steps.tag.outcome == 'failure'
+        run: npm run bundle:min
       - name: Test
         if: steps.tag.outcome == 'failure'
         run: npm run test:ci
