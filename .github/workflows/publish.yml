@@ -44,7 +44,13 @@ jobs:
 
       - name: Install dependencies
         if: steps.need.outputs.publish == 'true'
-        run: npm ci --legacy-peer-deps
+        run: |
+          for attempt in 1 2 3; do
+            npm ci --legacy-peer-deps && exit 0
+            echo "npm ci failed (attempt ${attempt}/3), retrying in 10s..."
+            sleep 10
+          done
+          exit 1
       - name: Build
         if: steps.need.outputs.publish == 'true'
         run: npm run build

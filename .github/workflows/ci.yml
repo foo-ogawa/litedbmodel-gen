@@ -15,10 +15,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: |
+          for attempt in 1 2 3; do
+            npm ci --legacy-peer-deps --ignore-scripts && exit 0
+            echo "npm ci failed (attempt ${attempt}/3), retrying in 10s..."
+            sleep 10
+          done
+          exit 1
       - name: Audit
         run: npm audit --audit-level=moderate
       - name: Verify npm signatures
