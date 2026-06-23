@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Read package version
         id: pkg
@@ -38,7 +38,13 @@ jobs:
         run: echo "Release already exists for ${{ steps.pkg.outputs.tag }}"
       - name: Install
         if: steps.tag.outcome == 'failure'
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: |
+          for attempt in 1 2 3; do
+            npm ci --legacy-peer-deps --ignore-scripts && exit 0
+            echo "npm ci failed (attempt ${attempt}/3), retrying in 10s..."
+            sleep 10
+          done
+          exit 1
       - name: Audit
         if: steps.tag.outcome == 'failure'
         run: npm audit --audit-level=moderate
