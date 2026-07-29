@@ -3,7 +3,7 @@ cli_contracts: 0.1.0
 
 info:
   title: litedbmodel-gen CLI
-  version: 0.2.0
+  version: 0.7.15
   description: >-
     embedoc-based model code generator for litedbmodel.
     Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates
