@@ -2,7 +2,7 @@
 
 embedoc-based model code generator for litedbmodel. Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates TypeScript column definitions that stay in sync with your schema.
 
-**Version:** 0.2.0
+**Version:** 0.7.15
 
 ## Table of Contents
 
@@ -67,13 +67,13 @@ litedbmodel-gen init path/to/embedoc.config.yaml
 #### Extensions
 
 ```yaml
-x-agent: 
+x-agent:
   riskLevel: low
   requiresConfirmation: false
   idempotent: true
-  sideEffects: 
+  sideEffects:
     - file_write
-  recommendedBeforeUse: 
+  recommendedBeforeUse:
     - Run "npx embedoc init" first to create embedoc.config.yaml.
 ```
 
@@ -556,17 +556,17 @@ litedbmodel-gen audit src/services/user-service.ts --fail-on warning --report-fo
 #### Extensions
 
 ```yaml
-x-agent: 
+x-agent:
   riskLevel: low
   requiresConfirmation: false
   idempotent: true
   dsl_task: audit-litedbmodel-usage
-  sideEffects: 
+  sideEffects:
     - network
   sideEffectNote: Makes network calls to the configured LLM provider when adapter is not "mock". Writes to the filesystem only when --output is specified.
   safeDryRunOption: show-prompt
   expectedDurationMs: 120000
-  retryableExitCodes: 
+  retryableExitCodes:
     - 1
     - 12
 ```
@@ -1091,18 +1091,18 @@ litedbmodel-gen implement "Add bulk upsert for order items" --target src/service
 #### Extensions
 
 ```yaml
-x-agent: 
+x-agent:
   riskLevel: high
   requiresConfirmation: true
   idempotent: false
   dsl_task: implement-litedbmodel-feature
-  sideEffects: 
+  sideEffects:
     - network
     - filesystem_write
   sideEffectNote: The agent reads project files and writes implementation code directly to the target source file(s). Uses an agentic adapter (claude) with file read/write tools.
   safeDryRunOption: show-prompt
   expectedDurationMs: 120000
-  retryableExitCodes: 
+  retryableExitCodes:
     - 1
     - 12
 ```
@@ -1148,11 +1148,11 @@ litedbmodel-gen insights --format json --config embedoc.config.yaml
 #### Extensions
 
 ```yaml
-x-agent: 
+x-agent:
   riskLevel: low
   requiresConfirmation: false
   idempotent: true
-  sideEffects: 
+  sideEffects:
 
 ```
 
@@ -1189,11 +1189,11 @@ litedbmodel-gen agents [--format]
 #### Extensions
 
 ```yaml
-x-agent: 
+x-agent:
   riskLevel: low
   requiresConfirmation: false
   idempotent: true
-  sideEffects: 
+  sideEffects:
 
 ```
 

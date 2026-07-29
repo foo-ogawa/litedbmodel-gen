@@ -61,6 +61,18 @@ export type ImplementExitResult =
   | { exitCode: 11; stderr: unknown }
   | { exitCode: 12; stderr: unknown };
 
+export interface InsightsOptions {
+  format?: "json";
+  projectRoot?: string;
+  config?: string;
+}
+
+export type InsightsExitCode = 0 | 1;
+
+export type InsightsExitResult =
+  { exitCode: 0; stdout: unknown }
+  | { exitCode: 1; stderr: unknown };
+
 export interface AgentsOptions {
   format?: "yaml" | "json";
 }

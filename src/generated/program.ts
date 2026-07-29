@@ -6,8 +6,8 @@ export interface CommandHandlers {
   init: (config: string | undefined, options: Record<string, never>, parentOpts: Record<string, unknown>) => Promise<void>;
   audit: (target: string | undefined, options: { adapter?: string; model?: string; showPrompt?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string }, parentOpts: Record<string, unknown>) => Promise<void | string>;
   implement: (description: string | undefined, options: { target?: string; models?: string; adapter?: string; model?: string; showPrompt?: boolean; failOn?: string; output?: string; reportFormat?: string; logFile?: string }, parentOpts: Record<string, unknown>) => Promise<void | string>;
-  agents: (options: { format?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
   insights: (options: { format?: string; projectRoot?: string; config?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
+  agents: (options: { format?: string }, parentOpts: Record<string, unknown>) => Promise<void>;
 }
 
 export function createProgram(
@@ -25,7 +25,7 @@ export function createProgram(
     .command("init")
     .description("Set up litedbmodel-gen in an embedoc project.")
     .argument("[config]", "Path to embedoc.config.yaml. Defaults to embedoc.config.yaml in the current directory.")
-    .action(async (config, opts, cmd) => {
+    .action(async (config, _opts, cmd) => {
       await handlers.init(config, {}, cmd.optsWithGlobals());
     });
 
@@ -74,7 +74,7 @@ export function createProgram(
   program
     .command("insights")
     .description("Export SQL schema → model file edges as ExternalInsight JSON.")
-    .option("--format <format>", "Output format (json only).", "json")
+    .option("-f, --format <format>", "Output format (json only).", "json")
     .option("--project-root <path>", "Project root directory containing embedoc.config.yaml.", ".")
     .option("-c, --config <path>", "Path to embedoc.config.yaml.")
     .action(async (opts, cmd) => {
@@ -98,7 +98,7 @@ export function createProgram(
     .option("-a, --all", "Extract all commands.", false)
     .option("--include-meta", "Include extraction metadata.", true)
     .option("-F, --format <format>", "Output format (yaml or json).", "yaml")
-    .action(async (commands: string[], opts: { all?: boolean; includeMeta?: boolean; format?: string }, cmd: Command) => {
+    .action(async (commands: string[], opts: { all?: boolean; includeMeta?: boolean; format?: string }) => {
       if (commands.length === 0 && !opts.all) {
         process.stderr.write(JSON.stringify({ code: "INVALID_ARGS", message: "Specify command IDs or use --all" }) + "\n");
         process.exit(2);
@@ -118,7 +118,7 @@ export function createProgram(
               type: "cli-contracts/extract",
               extractedAt: new Date().toISOString(),
               specVersion: doc.cli_contracts ?? "0.1.0",
-              commands: ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.agents"],
+              commands: ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.insights","litedbmodel-gen.agents"],
             };
           }
           Object.assign(out, doc);
@@ -136,7 +136,7 @@ export function createProgram(
             yamlLines.push("extractedAt: " + new Date().toISOString());
             yamlLines.push("spec_version: " + (doc.cli_contracts ?? "0.1.0"));
             yamlLines.push("commands:");
-            for (const id of ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.agents"]) {
+            for (const id of ["litedbmodel-gen.init","litedbmodel-gen.audit","litedbmodel-gen.implement","litedbmodel-gen.insights","litedbmodel-gen.agents"]) {
               yamlLines.push("  - " + id);
             }
           }

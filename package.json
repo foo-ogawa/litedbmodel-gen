@@ -1,7 +1,7 @@
 {
   "name": "litedbmodel-gen",
-  "version": "0.7.14",
-  "description": "embedoc-based model code generator for litedbmodel — generates TypeScript column definitions from SQL DDL (PostgreSQL/MySQL/SQLite)",
+  "version": "0.7.15",
+  "description": "embedoc-based model code generator for litedbmodel \u2014 generates TypeScript column definitions from SQL DDL (PostgreSQL/MySQL/SQLite)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -55,7 +55,7 @@
     "@types/node": "^25.9.2",
     "agent-contracts": "^0.34.11",
     "agent-contracts-runtime": "^0.36.4",
-    "cli-contracts": "^0.32.0",
+    "cli-contracts": "^0.34.6",
     "commander": "^14.0.3",
     "embedoc": "^0.11.0",
     "esbuild": "^0.28.1",
