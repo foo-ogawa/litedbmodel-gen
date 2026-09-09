@@ -274,7 +274,8 @@ date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
 |----------|-----------|-----------------|
 | `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.number()` | `number` |
 | `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `string` |
-| `NUMERIC`, `DECIMAL`, `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
+| `NUMERIC`, `DECIMAL`, `MONEY` | `@column.text()` | **`string`** (exact — a JS number destroys `NUMERIC(38,10)`) |
+| `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
 | `VARCHAR`, `TEXT`, `CHAR` | `@column.text()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
 | `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `string` |
@@ -301,7 +302,7 @@ date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
 
 #### Primary Keys
 
-Columns with `PRIMARY KEY` constraints use `@column({ primaryKey: true })`. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
+Columns with `PRIMARY KEY` constraints keep their family and carry the option: `@column.number({ primaryKey: true })`, `@column.uuid({ primaryKey: true })`, and so on. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
 
 ### Marker Syntax
 

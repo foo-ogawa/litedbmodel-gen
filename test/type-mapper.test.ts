@@ -39,6 +39,23 @@ describe('mapColumnType', () => {
     });
   });
 
+  describe('fixed-precision decimals', () => {
+    // The spec maps DECIMAL / NUMERIC / MONEY to a string "精度保持のため": a JS number rounds past
+    // 2^53, and `NUMERIC(38,10)` read through `@column.number()` comes back destroyed (measured on
+    // live PostgreSQL and MySQL). Floats are inexact by definition and stay numbers.
+    it.each(['numeric', 'decimal', 'money'])('%s → exact decimal string', (sqlType) => {
+      const result = mapColumnType(col({ sqlType }));
+      expect(result.decorator).toBe('@column.text()');
+      expect(result.tsType).toBe('string');
+    });
+
+    it.each(['real', 'float', 'float4', 'float8', 'double', 'double precision'])('%s → number', (sqlType) => {
+      const result = mapColumnType(col({ sqlType }));
+      expect(result.decorator).toBe('@column.number()');
+      expect(result.tsType).toBe('number');
+    });
+  });
+
   describe('string types', () => {
     it.each(['varchar', 'text', 'char', 'character varying'])('%s → string', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));

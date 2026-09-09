@@ -27,16 +27,19 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
   'bigserial': { decorator: '@column.bigint()', tsType: 'string' },
   'smallserial': { decorator: '@column.number()', tsType: 'number' },
 
-  // Floating point / numeric
-  'numeric': { decorator: '@column.number()', tsType: 'number' },
-  'decimal': { decorator: '@column.number()', tsType: 'number' },
+  // Fixed-precision decimals read back as their EXACT decimal STRING: a JS number rounds past 2^53,
+  // and `NUMERIC(38,10)` is measurably destroyed by it (spec: DECIMAL / NUMERIC / MONEY → string).
+  'numeric': { decorator: '@column.text()', tsType: 'string' },
+  'decimal': { decorator: '@column.text()', tsType: 'string' },
+
+  // Floating point — inexact by definition, so a JS number loses nothing the column had
   'real': { decorator: '@column.number()', tsType: 'number' },
   'float': { decorator: '@column.number()', tsType: 'number' },
   'float4': { decorator: '@column.number()', tsType: 'number' },
   'float8': { decorator: '@column.number()', tsType: 'number' },
   'double': { decorator: '@column.number()', tsType: 'number' },
   'double precision': { decorator: '@column.number()', tsType: 'number' },
-  'money': { decorator: '@column.number()', tsType: 'number' },
+  'money': { decorator: '@column.text()', tsType: 'string' },
 
   // String types
   'varchar': { decorator: '@column.text()', tsType: 'string' },
