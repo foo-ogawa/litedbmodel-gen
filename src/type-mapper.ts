@@ -96,8 +96,8 @@ const ARRAY_TYPE_MAP: Record<string, ColumnMapping> = {
   'double precision': { decorator: '@column.numericArray()', tsType: '(number | null)[]' },
   'boolean': { decorator: '@column.booleanArray()', tsType: '(boolean | null)[]' },
   'bool': { decorator: '@column.booleanArray()', tsType: '(boolean | null)[]' },
-  'timestamp': { decorator: '@column.datetimeArray()', tsType: '(Date | null)[]' },
-  'timestamptz': { decorator: '@column.datetimeArray()', tsType: '(Date | null)[]' },
+  'timestamp': { decorator: '@column.datetimeArray()', tsType: '(string | null)[]' },
+  'timestamptz': { decorator: '@column.datetimeArray()', tsType: '(string | null)[]' },
 };
 
 export function mapColumnType(col: ColumnDef): ColumnMapping {

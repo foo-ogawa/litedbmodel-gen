@@ -130,10 +130,11 @@ describe('mapColumnType', () => {
       expect(result.tsType).toBe('(number | null)[]');
     });
 
-    it('timestamp[] → @column.datetimeArray()', () => {
+    it('timestamp[] → @column.datetimeArray() / (string | null)[]', () => {
+      // Element-wise the same TZ-attached string the scalar datetime family returns.
       const result = mapColumnType(col({ sqlType: 'timestamp[]', isArray: true }));
       expect(result.decorator).toBe('@column.datetimeArray()');
-      expect(result.tsType).toBe('(Date | null)[]');
+      expect(result.tsType).toBe('(string | null)[]');
     });
   });
 

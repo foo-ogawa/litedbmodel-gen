@@ -292,7 +292,7 @@ date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
 | `INTEGER[]` | `@column.intArray()` | `number[]` |
 | `NUMERIC[]` | `@column.numericArray()` | `(number \| null)[]` |
 | `BOOLEAN[]` | `@column.booleanArray()` | `(boolean \| null)[]` |
-| `TIMESTAMP[]` | `@column.datetimeArray()` | `(Date \| null)[]` |
+| `TIMESTAMP[]` | `@column.datetimeArray()` | `(string \| null)[]` |
 
 #### MySQL-specific
 
