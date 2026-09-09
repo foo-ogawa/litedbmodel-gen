@@ -17,26 +17,27 @@ function col(overrides: Partial<ColumnDef>): ColumnDef {
 describe('mapColumnType', () => {
   describe('integer types', () => {
     it.each([
-      ['integer', 'number'],
-      ['int', 'number'],
-      ['int4', 'number'],
-      ['smallint', 'number'],
-      ['mediumint', 'number'],
-      ['serial', 'number'],
-    ])('%s → number', (sqlType, tsType) => {
+      ['integer'],
+      ['int'],
+      ['int4'],
+      ['smallint'],
+      ['mediumint'],
+      ['serial'],
+    ])('%s → bigint', (sqlType) => {
+      // behavior-contracts has ONE integer type (`int` = a JS bigint, checked i64), so a SMALLINT and
+      // a BIGINT read back the same way.
       const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.number()');
-      expect(result.tsType).toBe(tsType);
+      expect(result.decorator).toBe('@column.bigint()');
+      expect(result.tsType).toBe('bigint');
     });
   });
 
   describe('bigint types', () => {
-    // litedbmodel reads a BIGINT as an EXACT DECIMAL STRING (a JS number rounds past 2^53, a JS
-    // bigint throws in JSON.stringify), so the generated declaration must say `string`.
-    it.each(['bigint', 'int8', 'bigserial'])('%s → exact decimal string', (sqlType) => {
+    // Every integer width is behavior-contracts' one `int` — a JS bigint on the TS plane.
+    it.each(['bigint', 'int8', 'bigserial'])('%s → bigint', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
       expect(result.decorator).toBe('@column.bigint()');
-      expect(result.tsType).toBe('string');
+      expect(result.tsType).toBe('bigint');
     });
   });
 

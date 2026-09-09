@@ -14,18 +14,19 @@ import type { ColumnDef, ColumnMapping } from './types.js';
  * not have, so it produced untyped columns wherever that metadata was missing.
  */
 const TYPE_MAP: Record<string, ColumnMapping> = {
-  // Integer types
-  'int': { decorator: '@column.number()', tsType: 'number' },
-  'int2': { decorator: '@column.number()', tsType: 'number' },
-  'int4': { decorator: '@column.number()', tsType: 'number' },
-  'int8': { decorator: '@column.bigint()', tsType: 'string' },
-  'integer': { decorator: '@column.number()', tsType: 'number' },
-  'smallint': { decorator: '@column.number()', tsType: 'number' },
-  'mediumint': { decorator: '@column.number()', tsType: 'number' },
-  'bigint': { decorator: '@column.bigint()', tsType: 'string' },
-  'serial': { decorator: '@column.number()', tsType: 'number' },
-  'bigserial': { decorator: '@column.bigint()', tsType: 'string' },
-  'smallserial': { decorator: '@column.number()', tsType: 'number' },
+  // Integer types — behavior-contracts has ONE integer type (`int`, a JS bigint on the TS plane,
+  // checked i64), so every width reads back the same way and no value is rounded on the way in.
+  'int': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'int2': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'int4': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'int8': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'integer': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'smallint': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'mediumint': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'bigint': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'serial': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'bigserial': { decorator: '@column.bigint()', tsType: 'bigint' },
+  'smallserial': { decorator: '@column.bigint()', tsType: 'bigint' },
 
   // Fixed-precision decimals read back as their EXACT decimal STRING: a JS number rounds past 2^53,
   // and `NUMERIC(38,10)` is measurably destroyed by it (spec: DECIMAL / NUMERIC / MONEY → string).

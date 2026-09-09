@@ -4,7 +4,7 @@ import { Post } from './Post.js';
 @model('users')
 class UserModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="users"*/
-  @column.number({ primaryKey: true }) id?: number;
+  @column.bigint({ primaryKey: true }) id?: bigint;
   @column.text() name?: string;
   @column.text() email?: string;
   @column.boolean() is_active?: boolean | null;

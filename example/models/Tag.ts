@@ -3,7 +3,7 @@ import { DBModel, model, column } from 'litedbmodel';
 @model('tags')
 class TagModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="tags"*/
-  @column.number({ primaryKey: true }) id?: number;
+  @column.bigint({ primaryKey: true }) id?: bigint;
   @column.text() name?: string;
   @column.text() slug?: string;
   /*@embedoc:end*/

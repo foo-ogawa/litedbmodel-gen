@@ -267,13 +267,13 @@ npx embedoc watch
 | SQL Type | Decorator | TypeScript Type |
 |----------|-----------|-----------------|
 The TypeScript type is the value `find()` RETURNS, which is not always the shape of the SQL column:
-litedbmodel reads a `BIGINT` as an exact decimal string (a JS number rounds past 2^53) and a
-date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
+litedbmodel reads every INTEGER width as a JS `bigint` — behavior-contracts' single integer type,
+checked i64 — and a date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
 
 | SQL Type | Decorator | TypeScript Type |
 |----------|-----------|-----------------|
-| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.number()` | `number` |
-| `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `string` |
+| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.bigint()` | **`bigint`** (behavior-contracts' one integer type) |
+| `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
 | `NUMERIC`, `DECIMAL`, `MONEY` | `@column.text()` | **`string`** (exact — a JS number destroys `NUMERIC(38,10)`) |
 | `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
 | `VARCHAR`, `TEXT`, `CHAR` | `@column.text()` | `string` |

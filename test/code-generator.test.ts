@@ -18,7 +18,7 @@ describe('generateColumnCode', () => {
     const result = generateColumnCode(table);
     const lines = result.split('\n');
 
-    expect(lines[0]).toBe('  @column.number({ primaryKey: true }) id?: number;');
+    expect(lines[0]).toBe('  @column.bigint({ primaryKey: true }) id?: bigint;');
     expect(lines[1]).toBe('  @column.text() name?: string;');
     expect(lines[2]).toBe('  @column.text() email?: string | null;');
     expect(lines[3]).toBe('  @column.boolean() is_active?: boolean | null;');
@@ -50,8 +50,8 @@ describe('generateColumnCode', () => {
     const result = generateColumnCode(table);
     const lines = result.split('\n');
 
-    expect(lines[0]).toBe('  @column.number({ primaryKey: true }) post_id?: number;');
-    expect(lines[1]).toBe('  @column.number({ primaryKey: true }) tag_id?: number;');
+    expect(lines[0]).toBe('  @column.bigint({ primaryKey: true }) post_id?: bigint;');
+    expect(lines[1]).toBe('  @column.bigint({ primaryKey: true }) tag_id?: bigint;');
     expect(lines[2]).toBe('  @column.datetime() created_at?: string | null;');
   });
 
@@ -84,6 +84,6 @@ describe('generateColumnCode', () => {
     const lines = result.split('\n');
 
     expect(lines[0]).toBe('  @column.json<Record<string, unknown>>() metadata?: Record<string, unknown> | null;');
-    expect(lines[1]).toBe('  @column.bigint() big_id?: string;');
+    expect(lines[1]).toBe('  @column.bigint() big_id?: bigint;');
   });
 });

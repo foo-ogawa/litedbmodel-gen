@@ -5,11 +5,11 @@ import { PostTag } from './PostTag.js';
 @model('posts')
 class PostModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="posts"*/
-  @column.number({ primaryKey: true }) id?: number;
-  @column.number() user_id?: number;
+  @column.bigint({ primaryKey: true }) id?: bigint;
+  @column.bigint() user_id?: bigint;
   @column.text() title?: string;
   @column.text() content?: string | null;
-  @column.number() view_count?: number | null;
+  @column.bigint() view_count?: bigint | null;
   @column.boolean() published?: boolean | null;
   @column.datetime() published_at?: string | null;
   @column.datetime() created_at?: string;
