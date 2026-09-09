@@ -5,10 +5,11 @@
   "scripts": {
     "embedoc:build": "embedoc build",
     "embedoc:watch": "embedoc watch",
-    "embedoc:generate": "embedoc generate --all"
+    "embedoc:generate": "embedoc generate --all",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "litedbmodel": "*",
+    "litedbmodel": "^2.2.7",
     "litedbmodel-gen": "file:..",
     "embedoc": "^0.14.6",
     "typescript": "^5.3.0",

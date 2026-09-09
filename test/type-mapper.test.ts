@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapColumnType } from '../src/type-mapper';
+import { generateColumnCode } from '../src/code-generator';
 import type { ColumnDef } from '../src/types';
 
 function col(overrides: Partial<ColumnDef>): ColumnDef {
@@ -151,6 +152,15 @@ describe('mapColumnType', () => {
       const result = mapColumnType(col({ sqlType: 'geometry' }));
       expect(result.decorator).toBe('@column.passthrough()');
       expect(result.tsType).toBe('unknown');
+    });
+
+    it('a nullable passthrough column is not spelled `unknown | null`', () => {
+      // `unknown` already admits null; the suffix would say the same type twice.
+      const line = generateColumnCode({
+        name: 't',
+        columns: [{ name: 'bin', sqlType: 'bytea', isPrimaryKey: false, isNullable: true, isArray: false }],
+      } as never);
+      expect(line).toBe('  @column.passthrough() bin?: unknown;');
     });
 
     it('returns @column.passthrough() / unknown[] for an unrecognized array type', () => {

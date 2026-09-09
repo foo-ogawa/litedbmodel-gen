@@ -9,7 +9,8 @@ export function generateColumnCode(table: TableDef): string {
 function formatColumnLine(col: ColumnDef): string {
   const mapping = mapColumnType(col);
   const decorator = buildDecorator(col, mapping.decorator);
-  const nullSuffix = col.isNullable && !col.isPrimaryKey ? ' | null' : '';
+  // `unknown` already admits null, so `unknown | null` is the same type spelled twice.
+  const nullSuffix = col.isNullable && !col.isPrimaryKey && mapping.tsType !== 'unknown' ? ' | null' : '';
   return `  ${decorator} ${col.name}?: ${mapping.tsType}${nullSuffix};`;
 }
 
