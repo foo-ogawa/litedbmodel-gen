@@ -5,15 +5,15 @@ import { PostTag } from './PostTag.js';
 @model('posts')
 class PostModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="posts"*/
-  @column({ primaryKey: true }) id?: number;
-  @column() user_id?: number;
-  @column() title?: string;
-  @column() content?: string | null;
-  @column() view_count?: number | null;
+  @column.number({ primaryKey: true }) id?: number;
+  @column.number() user_id?: number;
+  @column.text() title?: string;
+  @column.text() content?: string | null;
+  @column.number() view_count?: number | null;
   @column.boolean() published?: boolean | null;
-  @column.datetime() published_at?: Date | null;
-  @column.datetime() created_at?: Date;
-  @column.datetime() updated_at?: Date;
+  @column.datetime() published_at?: string | null;
+  @column.datetime() created_at?: string;
+  @column.datetime() updated_at?: string;
   /*@embedoc:end*/
 
   @belongsTo(() => [Post.user_id, User.id])

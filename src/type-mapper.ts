@@ -1,53 +1,66 @@
 import type { ColumnDef, ColumnMapping } from './types.js';
 
+/**
+ * SQL type → the `@column.*` family that DECLARES it, and the TS type that family reads back.
+ *
+ * The `tsType` here is the value `find()` returns, not the shape of the SQL column: litedbmodel reads
+ * `BIGINT` as an exact decimal STRING (a JS number rounds past 2^53, a JS `bigint` throws in
+ * `JSON.stringify`) and a date/timestamp as the column's own textual STRING (never a TZ-shifted
+ * `Date`). Generating `Date` / `bigint` here is what made generated models disagree with the values
+ * they received (litedbmodel#286).
+ *
+ * Every entry names a family. litedbmodel has no bare `@column()`: it inferred the type from
+ * `emitDecoratorMetadata`, which esbuild (tsx / vite / vitest) never emits and standard decorators do
+ * not have, so it produced untyped columns wherever that metadata was missing.
+ */
 const TYPE_MAP: Record<string, ColumnMapping> = {
   // Integer types
-  'int': { decorator: '@column()', tsType: 'number' },
-  'int2': { decorator: '@column()', tsType: 'number' },
-  'int4': { decorator: '@column()', tsType: 'number' },
-  'int8': { decorator: '@column.bigint()', tsType: 'bigint' },
-  'integer': { decorator: '@column()', tsType: 'number' },
-  'smallint': { decorator: '@column()', tsType: 'number' },
-  'mediumint': { decorator: '@column()', tsType: 'number' },
-  'bigint': { decorator: '@column.bigint()', tsType: 'bigint' },
-  'serial': { decorator: '@column()', tsType: 'number' },
-  'bigserial': { decorator: '@column.bigint()', tsType: 'bigint' },
-  'smallserial': { decorator: '@column()', tsType: 'number' },
+  'int': { decorator: '@column.number()', tsType: 'number' },
+  'int2': { decorator: '@column.number()', tsType: 'number' },
+  'int4': { decorator: '@column.number()', tsType: 'number' },
+  'int8': { decorator: '@column.bigint()', tsType: 'string' },
+  'integer': { decorator: '@column.number()', tsType: 'number' },
+  'smallint': { decorator: '@column.number()', tsType: 'number' },
+  'mediumint': { decorator: '@column.number()', tsType: 'number' },
+  'bigint': { decorator: '@column.bigint()', tsType: 'string' },
+  'serial': { decorator: '@column.number()', tsType: 'number' },
+  'bigserial': { decorator: '@column.bigint()', tsType: 'string' },
+  'smallserial': { decorator: '@column.number()', tsType: 'number' },
 
   // Floating point / numeric
-  'numeric': { decorator: '@column()', tsType: 'number' },
-  'decimal': { decorator: '@column()', tsType: 'number' },
-  'real': { decorator: '@column()', tsType: 'number' },
-  'float': { decorator: '@column()', tsType: 'number' },
-  'float4': { decorator: '@column()', tsType: 'number' },
-  'float8': { decorator: '@column()', tsType: 'number' },
-  'double': { decorator: '@column()', tsType: 'number' },
-  'double precision': { decorator: '@column()', tsType: 'number' },
-  'money': { decorator: '@column()', tsType: 'number' },
+  'numeric': { decorator: '@column.number()', tsType: 'number' },
+  'decimal': { decorator: '@column.number()', tsType: 'number' },
+  'real': { decorator: '@column.number()', tsType: 'number' },
+  'float': { decorator: '@column.number()', tsType: 'number' },
+  'float4': { decorator: '@column.number()', tsType: 'number' },
+  'float8': { decorator: '@column.number()', tsType: 'number' },
+  'double': { decorator: '@column.number()', tsType: 'number' },
+  'double precision': { decorator: '@column.number()', tsType: 'number' },
+  'money': { decorator: '@column.number()', tsType: 'number' },
 
   // String types
-  'varchar': { decorator: '@column()', tsType: 'string' },
-  'character varying': { decorator: '@column()', tsType: 'string' },
-  'char': { decorator: '@column()', tsType: 'string' },
-  'character': { decorator: '@column()', tsType: 'string' },
-  'text': { decorator: '@column()', tsType: 'string' },
-  'tinytext': { decorator: '@column()', tsType: 'string' },
-  'mediumtext': { decorator: '@column()', tsType: 'string' },
-  'longtext': { decorator: '@column()', tsType: 'string' },
-  'citext': { decorator: '@column()', tsType: 'string' },
-  'enum': { decorator: '@column()', tsType: 'string' },
+  'varchar': { decorator: '@column.text()', tsType: 'string' },
+  'character varying': { decorator: '@column.text()', tsType: 'string' },
+  'char': { decorator: '@column.text()', tsType: 'string' },
+  'character': { decorator: '@column.text()', tsType: 'string' },
+  'text': { decorator: '@column.text()', tsType: 'string' },
+  'tinytext': { decorator: '@column.text()', tsType: 'string' },
+  'mediumtext': { decorator: '@column.text()', tsType: 'string' },
+  'longtext': { decorator: '@column.text()', tsType: 'string' },
+  'citext': { decorator: '@column.text()', tsType: 'string' },
+  'enum': { decorator: '@column.text()', tsType: 'string' },
 
   // Boolean
   'boolean': { decorator: '@column.boolean()', tsType: 'boolean' },
   'bool': { decorator: '@column.boolean()', tsType: 'boolean' },
 
-  // Date/time
-  'timestamp': { decorator: '@column.datetime()', tsType: 'Date' },
-  'timestamptz': { decorator: '@column.datetime()', tsType: 'Date' },
-  'timestamp with time zone': { decorator: '@column.datetime()', tsType: 'Date' },
-  'timestamp without time zone': { decorator: '@column.datetime()', tsType: 'Date' },
-  'datetime': { decorator: '@column.datetime()', tsType: 'Date' },
-  'date': { decorator: '@column.date()', tsType: 'Date' },
+  // Date/time — read back as the column's own textual form, never a JS Date
+  'timestamp': { decorator: '@column.datetime()', tsType: 'string' },
+  'timestamptz': { decorator: '@column.datetime()', tsType: 'string' },
+  'timestamp with time zone': { decorator: '@column.datetime()', tsType: 'string' },
+  'timestamp without time zone': { decorator: '@column.datetime()', tsType: 'string' },
+  'datetime': { decorator: '@column.datetime()', tsType: 'string' },
+  'date': { decorator: '@column.date()', tsType: 'string' },
 
   // JSON
   'json': { decorator: '@column.json<Record<string, unknown>>()', tsType: 'Record<string, unknown>' },
@@ -56,12 +69,12 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
   // UUID
   'uuid': { decorator: '@column.uuid()', tsType: 'string' },
 
-  // Binary
-  'bytea': { decorator: '@column()', tsType: 'unknown' },
-  'blob': { decorator: '@column()', tsType: 'unknown' },
-  'tinyblob': { decorator: '@column()', tsType: 'unknown' },
-  'mediumblob': { decorator: '@column()', tsType: 'unknown' },
-  'longblob': { decorator: '@column()', tsType: 'unknown' },
+  // Binary — no cast exists for it; the driver's value (a Buffer) is passed through
+  'bytea': { decorator: '@column.passthrough()', tsType: 'unknown' },
+  'blob': { decorator: '@column.passthrough()', tsType: 'unknown' },
+  'tinyblob': { decorator: '@column.passthrough()', tsType: 'unknown' },
+  'mediumblob': { decorator: '@column.passthrough()', tsType: 'unknown' },
+  'longblob': { decorator: '@column.passthrough()', tsType: 'unknown' },
 };
 
 const ARRAY_TYPE_MAP: Record<string, ColumnMapping> = {
@@ -89,11 +102,11 @@ export function mapColumnType(col: ColumnDef): ColumnMapping {
     const baseType = col.sqlType.replace(/\[\]$/, '');
     const arrayMapping = ARRAY_TYPE_MAP[baseType];
     if (arrayMapping) return arrayMapping;
-    return { decorator: '@column()', tsType: 'unknown[]' };
+    return { decorator: '@column.passthrough()', tsType: 'unknown[]' };
   }
 
   const mapping = TYPE_MAP[col.sqlType];
   if (mapping) return mapping;
 
-  return { decorator: '@column()', tsType: 'unknown' };
+  return { decorator: '@column.passthrough()', tsType: 'unknown' };
 }

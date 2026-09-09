@@ -18,11 +18,11 @@ describe('generateColumnCode', () => {
     const result = generateColumnCode(table);
     const lines = result.split('\n');
 
-    expect(lines[0]).toBe('  @column({ primaryKey: true }) id?: number;');
-    expect(lines[1]).toBe('  @column() name?: string;');
-    expect(lines[2]).toBe('  @column() email?: string | null;');
+    expect(lines[0]).toBe('  @column.number({ primaryKey: true }) id?: number;');
+    expect(lines[1]).toBe('  @column.text() name?: string;');
+    expect(lines[2]).toBe('  @column.text() email?: string | null;');
     expect(lines[3]).toBe('  @column.boolean() is_active?: boolean | null;');
-    expect(lines[4]).toBe('  @column.datetime() created_at?: Date;');
+    expect(lines[4]).toBe('  @column.datetime() created_at?: string;');
   });
 
   it('generates UUID primary key', () => {
@@ -50,9 +50,9 @@ describe('generateColumnCode', () => {
     const result = generateColumnCode(table);
     const lines = result.split('\n');
 
-    expect(lines[0]).toBe('  @column({ primaryKey: true }) post_id?: number;');
-    expect(lines[1]).toBe('  @column({ primaryKey: true }) tag_id?: number;');
-    expect(lines[2]).toBe('  @column.datetime() created_at?: Date | null;');
+    expect(lines[0]).toBe('  @column.number({ primaryKey: true }) post_id?: number;');
+    expect(lines[1]).toBe('  @column.number({ primaryKey: true }) tag_id?: number;');
+    expect(lines[2]).toBe('  @column.datetime() created_at?: string | null;');
   });
 
   it('generates array types', () => {
@@ -84,6 +84,6 @@ describe('generateColumnCode', () => {
     const lines = result.split('\n');
 
     expect(lines[0]).toBe('  @column.json<Record<string, unknown>>() metadata?: Record<string, unknown> | null;');
-    expect(lines[1]).toBe('  @column.bigint() big_id?: bigint;');
+    expect(lines[1]).toBe('  @column.bigint() big_id?: string;');
   });
 });

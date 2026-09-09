@@ -183,7 +183,7 @@ schema.sql  ──>  embedoc generate + build  ──>  models/*.ts
 litedbmodel-gen provides two [embedoc](https://www.npmjs.com/package/embedoc) plugins for generating model column definitions from SQL DDL:
 
 1. **Datasource** (`sql_schema`) — reads and parses a `schema.sql` file into structured table definitions
-2. **Renderer** (`litedbmodel_columns`) — generates `@column()` decorator code from the datasource
+2. **Renderer** (`litedbmodel_columns`) — generates `@column.*` decorator code from the datasource
 
 Using embedoc's in-place marker system, only the column definitions inside markers are auto-updated. Hand-written code (relations, custom methods, exports) outside the markers is preserved.
 
@@ -191,12 +191,12 @@ Using embedoc's in-place marker system, only the column definitions inside marke
 @model('users')
 class UserModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="users"*/
-  @column({ primaryKey: true }) id?: number;
-  @column() name?: string;
-  @column() email?: string | null;
+  @column.number({ primaryKey: true }) id?: number;
+  @column.text() name?: string;
+  @column.text() email?: string | null;
   @column.boolean() is_active?: boolean | null;
-  @column.datetime() created_at?: Date;
-  @column.datetime() updated_at?: Date;
+  @column.datetime() created_at?: string;
+  @column.datetime() updated_at?: string;
   /*@embedoc:end*/
 
   // Hand-written — not touched by embedoc
@@ -266,15 +266,22 @@ npx embedoc watch
 
 | SQL Type | Decorator | TypeScript Type |
 |----------|-----------|-----------------|
-| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column()` | `number` |
-| `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
-| `NUMERIC`, `DECIMAL`, `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column()` | `number` |
-| `VARCHAR`, `TEXT`, `CHAR` | `@column()` | `string` |
+The TypeScript type is the value `find()` RETURNS, which is not always the shape of the SQL column:
+litedbmodel reads a `BIGINT` as an exact decimal string (a JS number rounds past 2^53) and a
+date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
+
+| SQL Type | Decorator | TypeScript Type |
+|----------|-----------|-----------------|
+| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.number()` | `number` |
+| `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `string` |
+| `NUMERIC`, `DECIMAL`, `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
+| `VARCHAR`, `TEXT`, `CHAR` | `@column.text()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
-| `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `Date` |
-| `DATE` | `@column.date()` | `Date` |
+| `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `string` |
+| `DATE` | `@column.date()` | `string` |
 | `JSON`, `JSONB` | `@column.json<Record<string, unknown>>()` | `Record<string, unknown>` |
 | `UUID` | `@column.uuid()` | `string` |
+| `BYTEA`, `BLOB` | `@column.passthrough()` | `unknown` |
 
 #### PostgreSQL Arrays
 
