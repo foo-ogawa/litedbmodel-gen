@@ -107,7 +107,7 @@ export async function runAgentTask(
       ...(mockResponses
         ? {
             hooks: {
-              beforeTask: async ({ adapter }) => {
+              beforeTask: async ({ adapter }: { adapter: unknown }) => {
                 (adapter as { responses?: typeof mockResponses }).responses = mockResponses;
               },
             },

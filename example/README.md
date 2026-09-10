@@ -51,3 +51,14 @@ npx embedoc build
 
 Only the column definitions inside `/*@embedoc:litedbmodel_columns*/` markers are updated.
 Hand-written relations and exports outside the markers are preserved.
+
+## Requirements
+
+The generated models use the `@column.*` families (`@column.text()`, `@column.number()`,
+`@column.passthrough()`, …) and the read contract that returns a string for datetime / date / bigint
+columns. That is **litedbmodel 2.2.7 or newer**. Refresh `package-lock.json` after installing it:
+
+```bash
+npm install
+npm run typecheck
+```
