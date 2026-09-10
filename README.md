@@ -268,11 +268,12 @@ npx embedoc watch
 |----------|-----------|-----------------|
 | `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column()` | `number` |
 | `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
-| `NUMERIC`, `DECIMAL`, `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column()` | `number` |
+| `NUMERIC`, `DECIMAL`, `MONEY` | `@column()` | `string` |
+| `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column()` | `number` |
 | `VARCHAR`, `TEXT`, `CHAR` | `@column()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
 | `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `Date` |
-| `DATE` | `@column.date()` | `Date` |
+| `DATE` | `@column.date()` | `string` |
 | `JSON`, `JSONB` | `@column.json<Record<string, unknown>>()` | `Record<string, unknown>` |
 | `UUID` | `@column.uuid()` | `string` |
 

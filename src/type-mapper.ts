@@ -15,15 +15,18 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
   'smallserial': { decorator: '@column()', tsType: 'number' },
 
   // Floating point / numeric
-  'numeric': { decorator: '@column()', tsType: 'number' },
-  'decimal': { decorator: '@column()', tsType: 'number' },
+  // litedbmodel 1.2 reads an exact decimal back as the driver's string (pg `numeric`, mysql2
+  // `DECIMAL`): a bare `@column()` on a `string` property is not cast, under tsc or esbuild alike,
+  // whereas a `number` property is cast only where `design:type` is emitted.
+  'numeric': { decorator: '@column()', tsType: 'string' },
+  'decimal': { decorator: '@column()', tsType: 'string' },
   'real': { decorator: '@column()', tsType: 'number' },
   'float': { decorator: '@column()', tsType: 'number' },
   'float4': { decorator: '@column()', tsType: 'number' },
   'float8': { decorator: '@column()', tsType: 'number' },
   'double': { decorator: '@column()', tsType: 'number' },
   'double precision': { decorator: '@column()', tsType: 'number' },
-  'money': { decorator: '@column()', tsType: 'number' },
+  'money': { decorator: '@column()', tsType: 'string' },
 
   // String types
   'varchar': { decorator: '@column()', tsType: 'string' },
@@ -47,7 +50,8 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
   'timestamp with time zone': { decorator: '@column.datetime()', tsType: 'Date' },
   'timestamp without time zone': { decorator: '@column.datetime()', tsType: 'Date' },
   'datetime': { decorator: '@column.datetime()', tsType: 'Date' },
-  'date': { decorator: '@column.date()', tsType: 'Date' },
+  // `@column.date()` reads a calendar date back as its `YYYY-MM-DD` string, never a `Date`.
+  'date': { decorator: '@column.date()', tsType: 'string' },
 
   // JSON
   'json': { decorator: '@column.json<Record<string, unknown>>()', tsType: 'Record<string, unknown>' },
