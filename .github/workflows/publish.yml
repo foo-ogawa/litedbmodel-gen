@@ -4,11 +4,11 @@ on:
   release:
     types: [published]
   workflow_run:
-    # `workflow_run` always runs this file as it stands on the default branch, so the v1.x line is
+    # `workflow_run` always runs this file as it stands on the default branch, so the 0.7.x line is
     # published by main's copy — which is why the checkout below has to name the released commit.
     workflows: ["GitHub Release"]
     types: [completed]
-    branches: [main, v1.x]
+    branches: [main, 0.7.x]
 
 jobs:
   publish:
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # Without a ref, a `workflow_run` checks out the default branch's head — main — so a
-          # v1.x release would publish main's contents under the v1.x version.
+          # 0.7.x release would publish main's contents under the 0.7.x version.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node.js
@@ -69,13 +69,15 @@ jobs:
       - name: Publish to npm
         if: steps.need.outputs.publish == 'true'
         # Only main — the litedbmodel 2.x line — moves `latest`. Every other line publishes under
-        # its own major (`v1`), so `npm install litedbmodel-gen` never lands on the 1.x line.
+        # `release-<major>.<minor>`, so `npm install litedbmodel-gen` never lands on the 1.2 line.
+        # npm refuses a tag that parses as a semver range (`v0`, `v1`, `0.7.x` all do), which is
+        # why the tag carries a prefix rather than the bare line name.
         run: |
           BRANCH="${{ github.event.workflow_run.head_branch || github.event.release.target_commitish }}"
           if [ "$BRANCH" = "main" ]; then
             DIST_TAG=latest
           else
-            DIST_TAG="v$(node -p "require('./package.json').version.split('.')[0]")"
+            DIST_TAG="release-$(node -p "require('./package.json').version.split('.').slice(0, 2).join('.')")"
           fi
           echo "Publishing with dist-tag: $DIST_TAG (branch: $BRANCH)"
           npm publish --access public --tag "$DIST_TAG"

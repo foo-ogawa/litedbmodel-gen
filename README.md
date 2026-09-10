@@ -342,9 +342,9 @@ const tables = parseSchema(sql, { database: 'PostgreSQL' });
 ## Requirements
 
 - Node.js 18+
-- **litedbmodel 1.2.x** — this is the 1.x line of litedbmodel-gen. It generates the `@column()` /
+- **litedbmodel 1.2.x** — this is the 0.7 line of litedbmodel-gen. It generates the `@column()` /
   `number` / `Date` shapes litedbmodel 1.2 reads back. For litedbmodel 2.x use
-  `litedbmodel-gen@2` (`npm install -D litedbmodel-gen@2`); the two lines generate code that does
+  `litedbmodel-gen@1` (`npm install -D litedbmodel-gen@1`); the two lines generate code that does
   not type-check against the other's litedbmodel.
 - embedoc >= 0.11.0
 - agent-contracts-runtime >= 0.32.0 (for `implement` and `audit` commands)
