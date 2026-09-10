@@ -191,7 +191,7 @@ Using embedoc's in-place marker system, only the column definitions inside marke
 @model('users')
 class UserModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="users"*/
-  @column.number({ primaryKey: true }) id?: number;
+  @column.bigint({ primaryKey: true }) id?: bigint;
   @column.text() name?: string;
   @column.text() email?: string | null;
   @column.boolean() is_active?: boolean | null;
@@ -264,8 +264,6 @@ npx embedoc watch
 
 #### Common (all dialects)
 
-| SQL Type | Decorator | TypeScript Type |
-|----------|-----------|-----------------|
 The TypeScript type is the value `find()` RETURNS, which is not always the shape of the SQL column:
 litedbmodel reads every INTEGER width as a JS `bigint` — behavior-contracts' single integer type,
 checked i64 — and a date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
@@ -302,7 +300,7 @@ checked i64 — and a date/timestamp as the column's own textual string (never a
 
 #### Primary Keys
 
-Columns with `PRIMARY KEY` constraints keep their family and carry the option: `@column.number({ primaryKey: true })`, `@column.uuid({ primaryKey: true })`, and so on. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
+Columns with `PRIMARY KEY` constraints keep their family and carry the option: `@column.bigint({ primaryKey: true })` for an integer key, `@column.uuid({ primaryKey: true })` for a UUID key, and so on. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
 
 ### Marker Syntax
 

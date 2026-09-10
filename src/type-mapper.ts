@@ -4,10 +4,10 @@ import type { ColumnDef, ColumnMapping } from './types.js';
  * SQL type → the `@column.*` family that DECLARES it, and the TS type that family reads back.
  *
  * The `tsType` here is the value `find()` returns, not the shape of the SQL column: litedbmodel reads
- * `BIGINT` as an exact decimal STRING (a JS number rounds past 2^53, a JS `bigint` throws in
- * `JSON.stringify`) and a date/timestamp as the column's own textual STRING (never a TZ-shifted
- * `Date`). Generating `Date` / `bigint` here is what made generated models disagree with the values
- * they received (litedbmodel#286).
+ * every INTEGER width as a JS `bigint` (behavior-contracts' one integer type, checked i64), an exact
+ * decimal as its textual STRING (a JS number rounds past 2^53), and a date/timestamp as the column's
+ * own textual STRING (never a TZ-shifted `Date`). Declaring `number` for an integer or `Date` for a
+ * timestamp would declare a type the column never reads back.
  *
  * Every entry names a family. litedbmodel has no bare `@column()`: it inferred the type from
  * `emitDecoratorMetadata`, which esbuild (tsx / vite / vitest) never emits and standard decorators do
