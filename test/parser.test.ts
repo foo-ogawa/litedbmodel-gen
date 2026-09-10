@@ -344,3 +344,130 @@ describe('stripCheckConstraints', () => {
     expect(result).not.toContain('my-check');
   });
 });
+
+describe('parseSchema - one statement it cannot read does not take the others with it', () => {
+  const names = (sql: string, database: 'PostgreSQL' | 'MySQL' | 'SQLite' = 'PostgreSQL') =>
+    parseSchema(sql, { database }).map((t) => t.name);
+
+  it('keeps every table around a function whose dollar-quoted body holds `;` and `:=`', () => {
+    const sql = `
+      CREATE TABLE public.users (id uuid NOT NULL, name text NOT NULL);
+      CREATE FUNCTION public.set_updated_at() RETURNS trigger
+          LANGUAGE plpgsql
+          AS $$
+      BEGIN
+          NEW.updated_at := now();
+          RETURN NEW;
+      END;
+      $$;
+      CREATE TABLE public.posts (id uuid NOT NULL);
+    `;
+    expect(names(sql)).toEqual(['users', 'posts']);
+  });
+
+  it('keeps every table around a function whose body is a quoted string or a tagged dollar quote', () => {
+    expect(names(`CREATE TABLE a (id integer);
+      CREATE FUNCTION f() RETURNS int LANGUAGE sql AS 'SELECT 1; SELECT 2';
+      CREATE TABLE b (id integer);`)).toEqual(['a', 'b']);
+    expect(names(`CREATE TABLE a (id integer);
+      CREATE FUNCTION f() RETURNS void AS $body$ BEGIN PERFORM 1; END; $body$ LANGUAGE plpgsql;
+      CREATE TABLE b (id integer);`)).toEqual(['a', 'b']);
+  });
+
+  it('does not split at the `;` of a pg_dump comment', () => {
+    expect(names(`-- Name: users; Type: TABLE; Schema: public
+      CREATE TABLE public.users (id integer);`)).toEqual(['users']);
+  });
+
+  it('throws, naming the table, when a CREATE TABLE cannot be read — never an empty result', () => {
+    expect(() => parseSchema(`CREATE TABLE ok (id integer);
+      CREATE TABLE broken (id integer, GARBAGE ((( );`)).toThrow(/Cannot parse the table broken/);
+  });
+});
+
+describe('parseSchema - column types node-sql-parser cannot read', () => {
+  it('reads the array and geometric types it rejects, keeping nullability', () => {
+    const [a, b] = parseSchema(`
+      CREATE TABLE a (
+        id integer PRIMARY KEY,
+        f boolean[] NOT NULL,
+        t timestamp[],
+        z timestamptz[],
+        u uuid[],
+        p point
+      );
+      CREATE TABLE b (id integer PRIMARY KEY);
+    `);
+    expect(b.name).toBe('b');
+    expect(a.columns.map((c) => [c.name, c.sqlType, c.isArray, c.isNullable])).toEqual([
+      ['id', 'integer', false, false],
+      ['f', 'boolean[]', true, false],
+      ['t', 'timestamp[]', true, true],
+      ['z', 'timestamptz[]', true, true],
+      ['u', 'uuid[]', true, true],
+      ['p', 'point', false, true],
+    ]);
+  });
+
+  it('keeps an ARRAY default in one column while standing in for an unreadable type', () => {
+    const [t] = parseSchema(`CREATE TABLE a (id integer, f boolean[] DEFAULT ARRAY[true, false], p point);`);
+    expect(t.columns.map((c) => [c.name, c.sqlType])).toEqual([
+      ['id', 'integer'],
+      ['f', 'boolean[]'],
+      ['p', 'point'],
+    ]);
+  });
+});
+
+describe('parseSchema - each dialect splits and names tables by its own rules', () => {
+  it('MySQL: mysqldump backquoted names', () => {
+    const [t] = parseSchema(
+      "CREATE TABLE `users` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB;",
+      { database: 'MySQL' },
+    );
+    expect(t.name).toBe('users');
+    expect(t.columns.map((c) => c.name)).toEqual(['id', 'name']);
+  });
+
+  it('MySQL: a `#` comment and a backslash-escaped quote do not end a statement at their `;`', () => {
+    expect(parseSchema("# users; main table\nCREATE TABLE users (id int);", { database: 'MySQL' })).toHaveLength(1);
+    expect(
+      parseSchema("CREATE TABLE a (s varchar(10) DEFAULT 'it\\'s; x');\nCREATE TABLE b (id int);", { database: 'MySQL' }),
+    ).toHaveLength(2);
+  });
+
+  it('MySQL and SQLite: a `;` inside a backquoted name does not end the statement', () => {
+    expect(parseSchema('CREATE TABLE `odd;name` (id int);\nCREATE TABLE b (id int);', { database: 'MySQL' }).map((t) => t.name))
+      .toEqual(['odd;name', 'b']);
+    expect(parseSchema('CREATE TABLE `odd;name` (id INTEGER);\nCREATE TABLE b (id INTEGER);', { database: 'SQLite' }).map((t) => t.name))
+      .toEqual(['odd;name', 'b']);
+  });
+
+  it('SQLite: backquoted and bracketed names', () => {
+    expect(parseSchema('CREATE TABLE `users` (`id` INTEGER PRIMARY KEY);', { database: 'SQLite' })[0].name).toBe('users');
+    const [t] = parseSchema('CREATE TABLE [users] ([id] INTEGER PRIMARY KEY, [first name] TEXT NOT NULL);', { database: 'SQLite' });
+    expect(t.name).toBe('users');
+    expect(t.columns.map((c) => [c.name, c.sqlType, c.isNullable])).toEqual([
+      ['id', 'integer', false],
+      ['first name', 'text', false],
+    ]);
+  });
+
+  it('PostgreSQL: an ARRAY default does not split its column', () => {
+    const [t] = parseSchema('CREATE TABLE a (id integer, xs integer[] DEFAULT ARRAY[1,2], y text);');
+    expect(t.columns.map((c) => c.name)).toEqual(['id', 'xs', 'y']);
+  });
+});
+
+describe('stripCheckConstraints - a column-level CHECK keeps its column separated from the next item', () => {
+  it('does not take the comma after a column-level CHECK', () => {
+    const out = stripCheckConstraints(
+      "CREATE TABLE t (id integer, email text CHECK (email ~* '^x$'), CONSTRAINT t_pkey PRIMARY KEY (id));",
+    );
+    expect(out).toMatch(/email text\s*,\s*CONSTRAINT t_pkey/);
+    expect(parseSchema(out)[0].columns.map((c) => [c.name, c.isPrimaryKey])).toEqual([
+      ['id', true],
+      ['email', false],
+    ]);
+  });
+});
