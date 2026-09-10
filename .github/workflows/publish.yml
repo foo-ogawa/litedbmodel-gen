@@ -4,9 +4,11 @@ on:
   release:
     types: [published]
   workflow_run:
+    # `workflow_run` always runs this file as it stands on the default branch, so the v1.x line is
+    # published by main's copy — which is why the checkout below has to name the released commit.
     workflows: ["GitHub Release"]
     types: [completed]
-    branches: [main]
+    branches: [main, v1.x]
 
 jobs:
   publish:
@@ -18,6 +20,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Without a ref, a `workflow_run` checks out the default branch's head — main — so a
+          # v1.x release would publish main's contents under the v1.x version.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,7 +68,17 @@ jobs:
         run: npm run test:ci
       - name: Publish to npm
         if: steps.need.outputs.publish == 'true'
-        run: npm publish --access public
+        # Only main — the litedbmodel 2.x line — moves `latest`. Every other line publishes under
+        # its own major (`v1`), so `npm install litedbmodel-gen` never lands on the 1.x line.
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch || github.event.release.target_commitish }}"
+          if [ "$BRANCH" = "main" ]; then
+            DIST_TAG=latest
+          else
+            DIST_TAG="v$(node -p "require('./package.json').version.split('.')[0]")"
+          fi
+          echo "Publishing with dist-tag: $DIST_TAG (branch: $BRANCH)"
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Upload bundle to GitHub Release
