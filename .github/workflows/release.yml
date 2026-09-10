@@ -2,9 +2,9 @@ name: GitHub Release
 
 on:
   push:
-    # main is the litedbmodel 2.x line, v1.x the litedbmodel 1.x line. Each is released from
+    # main is the litedbmodel 2.x line, 0.7.x the litedbmodel 1.2 line. Each is released from
     # its own branch; only main's release is the one GitHub marks as Latest.
-    branches: [main, v1.x]
+    branches: [main, 0.7.x]
   workflow_dispatch:
 
 permissions:
