@@ -54,9 +54,10 @@ Hand-written relations and exports outside the markers are preserved.
 
 ## Requirements
 
-The generated models use the `@column.*` families (`@column.text()`, `@column.number()`,
-`@column.passthrough()`, …) and the read contract that returns a string for datetime / date / bigint
-columns. That is **litedbmodel 2.2.7 or newer**. Refresh `package-lock.json` after installing it:
+The generated models use `@column()` and the typed families litedbmodel 1.2 provides
+(`@column.bigint()`, `@column.datetime()`, …), and declare the types litedbmodel 1.2 reads back —
+`number` for an integer, `Date` for a datetime. That is **litedbmodel 1.2**. Refresh
+`package-lock.json` after installing it:
 
 ```bash
 npm install

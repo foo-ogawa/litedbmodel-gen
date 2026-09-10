@@ -2,7 +2,9 @@ name: GitHub Release
 
 on:
   push:
-    branches: [main]
+    # main is the litedbmodel 2.x line, 0.7.x the litedbmodel 1.2 line. Each is released from
+    # its own branch; only main's release is the one GitHub marks as Latest.
+    branches: [main, 0.7.x]
   workflow_dispatch:
 
 permissions:
@@ -71,7 +73,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          LATEST=false
+          if [ "${{ github.ref_name }}" = "main" ]; then LATEST=true; fi
           gh release create "${{ steps.pkg.outputs.tag }}" \
             --target "${{ github.sha }}" \
             --title "${{ steps.pkg.outputs.tag }}" \
+            --latest="$LATEST" \
             --generate-notes

@@ -11,7 +11,7 @@ Code generator and LLM-powered development assistant for [litedbmodel](https://w
 ## Quick Start
 
 ```bash
-npm install -D litedbmodel-gen embedoc
+npm install -D litedbmodel-gen@0.7 embedoc
 npx embedoc init && npx litedbmodel-gen init
 
 # Generate model definitions from schema.sql
@@ -183,7 +183,7 @@ schema.sql  ──>  embedoc generate + build  ──>  models/*.ts
 litedbmodel-gen provides two [embedoc](https://www.npmjs.com/package/embedoc) plugins for generating model column definitions from SQL DDL:
 
 1. **Datasource** (`sql_schema`) — reads and parses a `schema.sql` file into structured table definitions
-2. **Renderer** (`litedbmodel_columns`) — generates `@column.*` decorator code from the datasource
+2. **Renderer** (`litedbmodel_columns`) — generates `@column()` decorator code from the datasource
 
 Using embedoc's in-place marker system, only the column definitions inside markers are auto-updated. Hand-written code (relations, custom methods, exports) outside the markers is preserved.
 
@@ -191,12 +191,12 @@ Using embedoc's in-place marker system, only the column definitions inside marke
 @model('users')
 class UserModel extends DBModel {
   /*@embedoc:litedbmodel_columns table="users"*/
-  @column.number({ primaryKey: true }) id?: number;
-  @column.text() name?: string;
-  @column.text() email?: string | null;
+  @column({ primaryKey: true }) id?: number;
+  @column() name?: string;
+  @column() email?: string | null;
   @column.boolean() is_active?: boolean | null;
-  @column.datetime() created_at?: string;
-  @column.datetime() updated_at?: string;
+  @column.datetime() created_at?: Date;
+  @column.datetime() updated_at?: Date;
   /*@embedoc:end*/
 
   // Hand-written — not touched by embedoc
@@ -214,7 +214,7 @@ export type User = InstanceType<typeof User>;
 
 ```bash
 npx embedoc init
-npm install -D litedbmodel-gen
+npm install -D litedbmodel-gen@0.7
 npx litedbmodel-gen init
 ```
 
@@ -266,23 +266,16 @@ npx embedoc watch
 
 | SQL Type | Decorator | TypeScript Type |
 |----------|-----------|-----------------|
-The TypeScript type is the value `find()` RETURNS, which is not always the shape of the SQL column:
-litedbmodel reads every INTEGER width as a JS `bigint` — behavior-contracts' single integer type,
-checked i64 — and a date/timestamp as the column's own textual string (never a TZ-shifted `Date`).
-
-| SQL Type | Decorator | TypeScript Type |
-|----------|-----------|-----------------|
-| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.bigint()` | **`bigint`** (behavior-contracts' one integer type) |
+| `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column()` | `number` |
 | `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
-| `NUMERIC`, `DECIMAL`, `MONEY` | `@column.text()` | **`string`** (exact — a JS number destroys `NUMERIC(38,10)`) |
-| `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
-| `VARCHAR`, `TEXT`, `CHAR` | `@column.text()` | `string` |
+| `NUMERIC`, `DECIMAL`, `MONEY` | `@column()` | `string` |
+| `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column()` | `number` |
+| `VARCHAR`, `TEXT`, `CHAR` | `@column()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
-| `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `string` |
+| `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `Date` |
 | `DATE` | `@column.date()` | `string` |
 | `JSON`, `JSONB` | `@column.json<Record<string, unknown>>()` | `Record<string, unknown>` |
 | `UUID` | `@column.uuid()` | `string` |
-| `BYTEA`, `BLOB` | `@column.passthrough()` | `unknown` |
 
 #### PostgreSQL Arrays
 
@@ -292,7 +285,7 @@ checked i64 — and a date/timestamp as the column's own textual string (never a
 | `INTEGER[]` | `@column.intArray()` | `number[]` |
 | `NUMERIC[]` | `@column.numericArray()` | `(number \| null)[]` |
 | `BOOLEAN[]` | `@column.booleanArray()` | `(boolean \| null)[]` |
-| `TIMESTAMP[]` | `@column.datetimeArray()` | `(string \| null)[]` |
+| `TIMESTAMP[]` | `@column.datetimeArray()` | `(Date \| null)[]` |
 
 #### MySQL-specific
 
@@ -302,7 +295,7 @@ checked i64 — and a date/timestamp as the column's own textual string (never a
 
 #### Primary Keys
 
-Columns with `PRIMARY KEY` constraints keep their family and carry the option: `@column.number({ primaryKey: true })`, `@column.uuid({ primaryKey: true })`, and so on. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
+Columns with `PRIMARY KEY` constraints use `@column({ primaryKey: true })`. For UUID primary keys: `@column.uuid({ primaryKey: true })`. Composite primary keys are supported.
 
 ### Marker Syntax
 
@@ -350,6 +343,10 @@ const tables = parseSchema(sql, { database: 'PostgreSQL' });
 ## Requirements
 
 - Node.js 18+
+- **litedbmodel 1.2.x** — this is the 0.7 line of litedbmodel-gen. It generates the `@column()` /
+  `number` / `Date` shapes litedbmodel 1.2 reads back. For litedbmodel 2.x use
+  `litedbmodel-gen@1` (`npm install -D litedbmodel-gen@1`); the two lines generate code that does
+  not type-check against the other's litedbmodel.
 - embedoc >= 0.11.0
 - agent-contracts-runtime >= 0.32.0 (for `implement` and `audit` commands)
 

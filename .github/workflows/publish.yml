@@ -1,23 +1,29 @@
 name: Publish Package to npm
 
 on:
-  release:
-    types: [published]
+  # Only `workflow_run`. A `release` trigger would take the line from the release's
+  # `target_commitish`, which is the default branch's name — "main" — for a release a person
+  # creates, so a 0.7.x release made by hand would publish under `latest`. To re-run a release,
+  # dispatch "GitHub Release" on the branch instead: that run carries the right head branch.
   workflow_run:
+    # `workflow_run` always runs this file as it stands on the default branch, so the 0.7.x line is
+    # published by main's copy — which is why the checkout below has to name the released commit.
     workflows: ["GitHub Release"]
     types: [completed]
-    branches: [main]
+    branches: [main, 0.7.x]
 
 jobs:
   publish:
-    if: >-
-      github.event_name == 'release' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Without a ref, a `workflow_run` checks out the default branch's head — main — so a
+          # 0.7.x release would publish main's contents under the 0.7.x version.
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,11 +35,6 @@ jobs:
       - name: Decide whether publish is needed
         id: need
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           VERSION=$(node -p "require('./package.json').version")
           if npm view "litedbmodel-gen@${VERSION}" version >/dev/null 2>&1; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
@@ -62,7 +63,19 @@ jobs:
         run: npm run test:ci
       - name: Publish to npm
         if: steps.need.outputs.publish == 'true'
-        run: npm publish --access public
+        # Only main — the litedbmodel 2.x line — moves `latest`. Every other line publishes under
+        # `release-<major>.<minor>`, so `npm install litedbmodel-gen` never lands on the 1.2 line.
+        # npm refuses a tag that parses as a semver range (`v0`, `v1`, `0.7.x` all do), which is
+        # why the tag carries a prefix rather than the bare line name.
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [ "$BRANCH" = "main" ]; then
+            DIST_TAG=latest
+          else
+            DIST_TAG="release-$(node -p "require('./package.json').version.split('.').slice(0, 2).join('.')")"
+          fi
+          echo "Publishing with dist-tag: $DIST_TAG (branch: $BRANCH)"
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Upload bundle to GitHub Release

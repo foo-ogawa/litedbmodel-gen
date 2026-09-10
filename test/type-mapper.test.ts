@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { mapColumnType } from '../src/type-mapper';
-import { generateColumnCode } from '../src/code-generator';
 import type { ColumnDef } from '../src/types';
 
 function col(overrides: Partial<ColumnDef>): ColumnDef {
@@ -17,23 +16,20 @@ function col(overrides: Partial<ColumnDef>): ColumnDef {
 describe('mapColumnType', () => {
   describe('integer types', () => {
     it.each([
-      ['integer'],
-      ['int'],
-      ['int4'],
-      ['smallint'],
-      ['mediumint'],
-      ['serial'],
-    ])('%s → bigint', (sqlType) => {
-      // behavior-contracts has ONE integer type (`int` = a JS bigint, checked i64), so a SMALLINT and
-      // a BIGINT read back the same way.
+      ['integer', 'number'],
+      ['int', 'number'],
+      ['int4', 'number'],
+      ['smallint', 'number'],
+      ['mediumint', 'number'],
+      ['serial', 'number'],
+    ])('%s → number', (sqlType, tsType) => {
       const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.bigint()');
-      expect(result.tsType).toBe('bigint');
+      expect(result.decorator).toBe('@column()');
+      expect(result.tsType).toBe(tsType);
     });
   });
 
   describe('bigint types', () => {
-    // Every integer width is behavior-contracts' one `int` — a JS bigint on the TS plane.
     it.each(['bigint', 'int8', 'bigserial'])('%s → bigint', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
       expect(result.decorator).toBe('@column.bigint()');
@@ -41,27 +37,10 @@ describe('mapColumnType', () => {
     });
   });
 
-  describe('fixed-precision decimals', () => {
-    // The spec maps DECIMAL / NUMERIC / MONEY to a string "精度保持のため": a JS number rounds past
-    // 2^53, and `NUMERIC(38,10)` read through `@column.number()` comes back destroyed (measured on
-    // live PostgreSQL and MySQL). Floats are inexact by definition and stay numbers.
-    it.each(['numeric', 'decimal', 'money'])('%s → exact decimal string', (sqlType) => {
-      const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.text()');
-      expect(result.tsType).toBe('string');
-    });
-
-    it.each(['real', 'float', 'float4', 'float8', 'double', 'double precision'])('%s → number', (sqlType) => {
-      const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.number()');
-      expect(result.tsType).toBe('number');
-    });
-  });
-
   describe('string types', () => {
     it.each(['varchar', 'text', 'char', 'character varying'])('%s → string', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.text()');
+      expect(result.decorator).toBe('@column()');
       expect(result.tsType).toBe('string');
     });
   });
@@ -75,16 +54,25 @@ describe('mapColumnType', () => {
   });
 
   describe('datetime types', () => {
-    // A datetime reads back as the COLUMN's own textual form, never a TZ-shifted JS Date.
-    it.each(['timestamp', 'timestamptz', 'datetime'])('%s → string', (sqlType) => {
+    it.each(['timestamp', 'timestamptz', 'datetime'])('%s → Date', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
       expect(result.decorator).toBe('@column.datetime()');
+      expect(result.tsType).toBe('Date');
+    });
+  });
+
+  describe('exact decimals', () => {
+    // litedbmodel 1.2 returns the driver's string for these; `number` would be cast only where
+    // `design:type` is emitted (tsc), and left a string under esbuild (tsx / vite / vitest).
+    it.each(['numeric', 'decimal', 'money'])('%s → @column() string', (sqlType) => {
+      const result = mapColumnType(col({ sqlType }));
+      expect(result.decorator).toBe('@column()');
       expect(result.tsType).toBe('string');
     });
   });
 
   describe('date', () => {
-    it("date → @column.date() / 'YYYY-MM-DD' string", () => {
+    it('date → @column.date()', () => {
       const result = mapColumnType(col({ sqlType: 'date' }));
       expect(result.decorator).toBe('@column.date()');
       expect(result.tsType).toBe('string');
@@ -132,42 +120,18 @@ describe('mapColumnType', () => {
       expect(result.tsType).toBe('(number | null)[]');
     });
 
-    it('timestamp[] → @column.datetimeArray() / (string | null)[]', () => {
-      // Element-wise the same TZ-attached string the scalar datetime family returns.
+    it('timestamp[] → @column.datetimeArray()', () => {
       const result = mapColumnType(col({ sqlType: 'timestamp[]', isArray: true }));
       expect(result.decorator).toBe('@column.datetimeArray()');
-      expect(result.tsType).toBe('(string | null)[]');
+      expect(result.tsType).toBe('(Date | null)[]');
     });
   });
 
-  describe('binary and unrecognized types', () => {
-    // litedbmodel has no bare `@column()`: a column must DECLARE its family, and `passthrough` is the
-    // declaration for "no cast exists — the driver's value comes through unchanged".
-    it.each(['bytea', 'blob', 'longblob'])('%s → @column.passthrough()', (sqlType) => {
-      const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.passthrough()');
-      expect(result.tsType).toBe('unknown');
-    });
-
-    it('returns @column.passthrough() / unknown for unrecognized types', () => {
+  describe('unknown types', () => {
+    it('returns @column() / unknown for unrecognized types', () => {
       const result = mapColumnType(col({ sqlType: 'geometry' }));
-      expect(result.decorator).toBe('@column.passthrough()');
+      expect(result.decorator).toBe('@column()');
       expect(result.tsType).toBe('unknown');
-    });
-
-    it('a nullable passthrough column is not spelled `unknown | null`', () => {
-      // `unknown` already admits null; the suffix would say the same type twice.
-      const line = generateColumnCode({
-        name: 't',
-        columns: [{ name: 'bin', sqlType: 'bytea', isPrimaryKey: false, isNullable: true, isArray: false }],
-      } as never);
-      expect(line).toBe('  @column.passthrough() bin?: unknown;');
-    });
-
-    it('returns @column.passthrough() / unknown[] for an unrecognized array type', () => {
-      const result = mapColumnType(col({ sqlType: 'geometry[]', isArray: true }));
-      expect(result.decorator).toBe('@column.passthrough()');
-      expect(result.tsType).toBe('unknown[]');
     });
   });
 });
