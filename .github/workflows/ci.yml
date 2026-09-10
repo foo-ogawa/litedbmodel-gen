@@ -26,11 +26,25 @@ jobs:
           done
           exit 1
       - name: Audit
-        run: npm audit --audit-level=moderate
+        # EVERY lockfile the repo tracks, not just the root: `example/package-lock.json` pinned
+        # vulnerable versions for months because nothing audited it (#48). The root is audited as
+        # installed; the rest are read from disk, since a nested tree has no node_modules here.
+        run: |
+          status=0
+          npm audit --audit-level=moderate || status=1
+          for lock in $(git ls-files '*/package-lock.json'); do
+            echo "::group::npm audit $(dirname "$lock")"
+            ( cd "$(dirname "$lock")" && npm audit --package-lock-only --audit-level=moderate ) || status=1
+            echo "::endgroup::"
+          done
+          exit $status
       - name: Verify npm signatures
         run: npm audit signatures
       - name: Lint
         run: npm run lint --if-present
+      - name: Typecheck
+        # `npm run typecheck` was failing on main with nothing watching it (#47).
+        run: npm run typecheck
       - name: Verify contract version matches the package version
         run: npx cli-contracts version-sync --check
       - name: Build
