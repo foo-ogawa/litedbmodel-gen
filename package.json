@@ -57,17 +57,18 @@
     "agent-contracts-runtime": "^0.36.4",
     "cli-contracts": "^0.34.6",
     "commander": "^14.0.3",
-    "embedoc": "^0.11.0",
+    "embedoc": "^0.14.8",
     "esbuild": "^0.28.1",
-    "js-yaml": "^4.1.2",
+    "js-yaml": "^4.3.2",
     "node-sql-parser": "^5.4.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.11",
     "zod": "^4.4.3"
   },
   "overrides": {
-    "js-yaml": "^4.1.2",
+    "js-yaml": "^4.3.2",
+    "csv-parse": "^7.0.2",
     "esbuild": "$esbuild"
   }
 }
