@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSchema, stripCheckConstraints } from '../src/parser';
+import { parseSchema } from '../src/parser';
 
 describe('parseSchema - PostgreSQL', () => {
   it('parses a basic CREATE TABLE', () => {
@@ -270,81 +270,6 @@ describe('parseSchema - CHECK constraints', () => {
   });
 });
 
-describe('stripCheckConstraints', () => {
-  it('returns sql unchanged when no CHECK constraints', () => {
-    const sql = `CREATE TABLE t (id SERIAL PRIMARY KEY, name TEXT);`;
-    expect(stripCheckConstraints(sql)).toBe(sql);
-  });
-
-  it('strips named CHECK at end of definition list', () => {
-    const sql = [
-      'CREATE TABLE t (',
-      '  id SERIAL PRIMARY KEY,',
-      '  val TEXT NOT NULL,',
-      "  CONSTRAINT chk CHECK ((val ~ '^\\d+$'::text))",
-      ');',
-    ].join('\n');
-    const result = stripCheckConstraints(sql);
-    expect(result).not.toContain('CHECK');
-    expect(result).not.toContain('CONSTRAINT');
-    expect(result).toContain('id SERIAL PRIMARY KEY');
-    expect(result).toContain('val TEXT NOT NULL');
-  });
-
-  it('strips CHECK in middle of definition list', () => {
-    const sql = [
-      'CREATE TABLE t (',
-      "  CONSTRAINT chk CHECK ((val ~ '^\\d+$'::text)),",
-      '  id SERIAL PRIMARY KEY,',
-      '  val TEXT NOT NULL',
-      ');',
-    ].join('\n');
-    const result = stripCheckConstraints(sql);
-    expect(result).not.toContain('CHECK');
-    expect(result).toContain('id SERIAL PRIMARY KEY');
-    expect(result).toContain('val TEXT NOT NULL');
-  });
-
-  it('strips multiple CHECK constraints', () => {
-    const sql = [
-      'CREATE TABLE t (',
-      '  id SERIAL PRIMARY KEY,',
-      '  a TEXT NOT NULL,',
-      '  b TEXT NOT NULL,',
-      "  CONSTRAINT chk_a CHECK ((a ~ '^\\d+$'::text)),",
-      "  CONSTRAINT chk_b CHECK ((b ~ '^\\d+$'::text))",
-      ');',
-    ].join('\n');
-    const result = stripCheckConstraints(sql);
-    expect(result).not.toContain('CHECK');
-    expect(result).toContain('id SERIAL PRIMARY KEY');
-    expect(result).toContain('a TEXT NOT NULL');
-    expect(result).toContain('b TEXT NOT NULL');
-  });
-
-  it('handles CHECK with escaped single quotes in expression', () => {
-    const sql = `CREATE TABLE t (
-  id SERIAL PRIMARY KEY,
-  val TEXT NOT NULL,
-  CONSTRAINT chk CHECK ((val <> 'it''s'))
-);`;
-    const result = stripCheckConstraints(sql);
-    expect(result).not.toContain('CHECK');
-    expect(result).toContain('val TEXT NOT NULL');
-  });
-
-  it('handles CHECK with quoted constraint name', () => {
-    const sql = `CREATE TABLE t (
-  id SERIAL PRIMARY KEY,
-  val INTEGER NOT NULL,
-  CONSTRAINT "my-check" CHECK ((val > 0))
-);`;
-    const result = stripCheckConstraints(sql);
-    expect(result).not.toContain('CHECK');
-    expect(result).not.toContain('my-check');
-  });
-});
-
 describe('parseSchema - one statement it cannot read does not take the others with it', () => {
   const names = (sql: string, database: 'PostgreSQL' | 'MySQL' | 'SQLite' = 'PostgreSQL') =>
     parseSchema(sql, { database }).map((t) => t.name);
@@ -459,15 +384,173 @@ describe('parseSchema - each dialect splits and names tables by its own rules', 
   });
 });
 
-describe('stripCheckConstraints - a column-level CHECK keeps its column separated from the next item', () => {
-  it('does not take the comma after a column-level CHECK', () => {
-    const out = stripCheckConstraints(
-      "CREATE TABLE t (id integer, email text CHECK (email ~* '^x$'), CONSTRAINT t_pkey PRIMARY KEY (id));",
-    );
-    expect(out).toMatch(/email text\s*,\s*CONSTRAINT t_pkey/);
-    expect(parseSchema(out)[0].columns.map((c) => [c.name, c.isPrimaryKey])).toEqual([
+describe('parseSchema - a table node-sql-parser rejects is read like any other', () => {
+  const columns = (sql: string, database: 'PostgreSQL' | 'MySQL' | 'SQLite' = 'PostgreSQL') =>
+    parseSchema(sql, { database })[0].columns.map((c) => [c.name, c.sqlType, c.isPrimaryKey, c.isNullable]);
+
+  it('PostgreSQL: names it accepts bare, as pg_dump writes them', () => {
+    const [t] = parseSchema('CREATE TABLE public.session (id integer PRIMARY KEY, at timestamp NOT NULL, json jsonb, MyCol text);');
+    expect(t.name).toBe('session');
+    expect(t.columns.map((c) => [c.name, c.sqlType, c.isNullable])).toEqual([
+      ['id', 'integer', false],
+      ['at', 'timestamp', false],
+      ['json', 'jsonb', true],
+      ['MyCol', 'text', true],
+    ]);
+  });
+
+  it('PostgreSQL: column options — identity, a DEFAULT cast to a schema-qualified type, a generated column, COLLATE', () => {
+    expect(
+      columns(`CREATE TABLE public.accounts (
+        id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        mood public.mood DEFAULT 'ok'::public.mood NOT NULL,
+        amount numeric(20,4) DEFAULT 0 NOT NULL,
+        total numeric GENERATED ALWAYS AS (amount * 2) STORED,
+        nick character varying(64) COLLATE pg_catalog."C"
+      );`),
+    ).toEqual([
+      ['id', 'bigint', true, false],
+      ['mood', 'public.mood', false, false],
+      ['amount', 'numeric', false, false],
+      ['total', 'numeric', false, true],
+      ['nick', 'character varying', false, true],
+    ]);
+  });
+
+  it('reads NOT NULL wherever it stands among the options, and only there', () => {
+    expect(
+      columns(`CREATE TABLE t (
+        a varchar(24) NOT NULL UNIQUE DEFAULT '',
+        b text CHECK (b IS NOT NULL),
+        c text DEFAULT 'NOT NULL',
+        d text -- NOT NULL
+      );`).map(([name, , , nullable]) => [name, nullable]),
+    ).toEqual([
+      ['a', false],
+      ['b', true],
+      ['c', true],
+      ['d', true],
+    ]);
+  });
+
+  it('reads a column list with comments between its columns', () => {
+    expect(
+      columns(`CREATE TABLE all_types (
+        id SERIAL PRIMARY KEY,
+        -- Array types
+        int_array INTEGER[],
+        bool_array BOOLEAN[] /* nullable */ ,
+        ts_array TIMESTAMP[] NOT NULL
+      );`),
+    ).toEqual([
+      ['id', 'serial', true, false],
+      ['int_array', 'integer[]', false, true],
+      ['bool_array', 'boolean[]', false, true],
+      ['ts_array', 'timestamp[]', false, false],
+    ]);
+    expect(columns('CREATE TABLE t ([b c] TEXT, /* note */ UNIQUE ([b c]));', 'SQLite')).toEqual([['b c', 'text', false, true]]);
+  });
+
+  it('PostgreSQL: an array of a type spelled out, as pg_dump writes it, reads as an array of that type', () => {
+    expect(
+      columns('CREATE TABLE t (a timestamp with time zone[], b timestamp without time zone[] NOT NULL);'),
+    ).toEqual([
+      ['a', 'timestamp[]', false, true],
+      ['b', 'timestamp[]', false, false],
+    ]);
+  });
+
+  it('PostgreSQL: EXCLUDE opens a constraint only before USING or its element list', () => {
+    expect(columns('CREATE TABLE t (id integer, exclude boolean, EXCLUDE USING gist (id WITH =));')).toEqual([
+      ['id', 'integer', false, true],
+      ['exclude', 'boolean', false, true],
+    ]);
+  });
+
+  it('keeps a table-level PRIMARY KEY after a column-level CHECK', () => {
+    expect(
+      columns("CREATE TABLE t (id integer, email text CHECK (email ~* '^x$'), CONSTRAINT t_pkey PRIMARY KEY (id));")
+        .map(([name, , pk]) => [name, pk]),
+    ).toEqual([
       ['id', true],
       ['email', false],
     ]);
+  });
+
+  it('MySQL: a bare KEY in a column is its PRIMARY KEY; KEY, INDEX and FULLTEXT items are indexes', () => {
+    expect(
+      columns(
+        `CREATE TABLE \`t\` (
+          \`id\` int NOT NULL KEY,
+          \`key\` varchar(255) UNIQUE KEY,
+          \`desc\` text,
+          KEY \`idx\` (\`desc\`(10)),
+          INDEX i (\`key\`),
+          UNIQUE KEY \`u\` (\`key\`),
+          FULLTEXT KEY \`f\` (\`desc\`)
+        ) ENGINE=InnoDB;`,
+        'MySQL',
+      ),
+    ).toEqual([
+      ['id', 'int', true, false],
+      ['key', 'varchar', false, true],
+      ['desc', 'text', false, true],
+    ]);
+  });
+
+  it('SQLite: a bare name it accepts and a column with no type', () => {
+    const [t] = parseSchema('CREATE TABLE session (id INTEGER PRIMARY KEY AUTOINCREMENT, data, value TEXT NOT NULL);', {
+      database: 'SQLite',
+    });
+    expect(t.name).toBe('session');
+    expect(t.columns.map((c) => [c.name, c.sqlType, c.isNullable])).toEqual([
+      ['id', 'integer', false],
+      ['data', '', true],
+      ['value', 'text', false],
+    ]);
+  });
+
+  it('reads every table of a pg_dump schema and skips what is not a table', () => {
+    const tables = parseSchema(`
+      SET client_encoding = 'UTF8';
+      CREATE TYPE public.mood AS ENUM ('sad', 'ok');
+      CREATE DOMAIN public.posint AS integer CHECK (VALUE > 0);
+      CREATE FUNCTION public.touch() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        NEW.updated_at := now(); -- the ; here must not split
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TABLE public.orders (
+          id integer DEFAULT nextval('public.orders_id_seq'::regclass) NOT NULL,
+          status text DEFAULT 'new'::text NOT NULL,
+          at timestamp with time zone,
+          CONSTRAINT orders_status_check CHECK ((status = ANY (ARRAY['new'::text, 'paid'::text]))),
+          CONSTRAINT orders_pkey PRIMARY KEY (id)
+      );
+      CREATE UNLOGGED TABLE public.cache (k text PRIMARY KEY, v bytea);
+      CREATE TABLE public.events (id bigint NOT NULL, happened_on date NOT NULL) PARTITION BY RANGE (happened_on);
+      CREATE TABLE public.events_2026 PARTITION OF public.events FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+      CREATE INDEX orders_at_idx ON public.orders USING btree (at);
+      COMMENT ON TABLE public.orders IS 'orders; one row per purchase';
+    `);
+    expect(tables.map((t) => t.name)).toEqual(['orders', 'cache', 'events']);
+    expect(tables[0].columns.map((c) => [c.name, c.isPrimaryKey, c.isNullable])).toEqual([
+      ['id', true, false],
+      ['status', false, false],
+      ['at', false, true],
+    ]);
+  });
+
+  it('throws, naming the table, when its columns come from another table', () => {
+    expect(() => parseSchema('CREATE TABLE c (LIKE p INCLUDING ALL, x int);')).toThrow(/Cannot parse the table c: LIKE/);
+    expect(() => parseSchema('CREATE TABLE c (x int) INHERITS (p);')).toThrow(/Cannot parse the table c: INHERITS/);
+    expect(() => parseSchema('CREATE TABLE c (LIKE p);', { database: 'MySQL' })).toThrow(/Cannot parse the table c: LIKE/);
+  });
+
+  it('throws on a MySQL dump read as PostgreSQL rather than taking its indexes for columns', () => {
+    expect(() => parseSchema('CREATE TABLE `t` (\n  `id` int NOT NULL,\n  KEY `idx` (`id`)\n) ENGINE=InnoDB;')).toThrow(
+      /Cannot parse the table `t`: '`' does not start a column name in PostgreSQL/,
+    );
   });
 });
