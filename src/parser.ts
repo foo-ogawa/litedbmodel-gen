@@ -73,24 +73,30 @@ const COLUMN_OPTION: Record<DatabaseDialect, ReadonlySet<string>> = {
   SQLite: new Set([...COLUMN_OPTION_COMMON, 'AS']),
 };
 
+/** The SERIAL types, which the database makes NOT NULL (PostgreSQL's family, and MySQL's SERIAL). */
+const SERIAL = /^(?:SMALL|BIG)?SERIAL[248]?$/i;
+
 /**
- * The table a CREATE TABLE defines, or null for any other statement and for a table with no column
- * list of its own (`AS SELECT`, `PARTITION OF`, `OF type`).
+ * The table a CREATE TABLE defines, or null for any other statement and for a partition, which is part
+ * of its parent table.
  */
 function readTable(statement: string, parser: SqlParser, database: DatabaseDialect): TableDef | null {
   const body = withoutLeadingComments(statement, database);
   const match = CREATE_TABLE.exec(body);
   if (!match) return null;
 
-  let open = match[0].length;
-  while (open < body.length && /\s/.test(body[open])) open++;
-  if (body[open] !== '(') return null;
-
   // A table that cannot be read is an error, never a table with fewer columns: a model generated from
   // it would silently lose them.
   const fail = (reason: string): never => {
     throw new Error(`Cannot parse the table ${match[1]}: ${reason}`);
   };
+
+  let open = match[0].length;
+  while (open < body.length && /\s/.test(body[open])) open++;
+  if (body[open] !== '(') {
+    if (words(tokens(body, open, body.length, database)).slice(0, 2).join(' ') === 'PARTITION OF') return null;
+    fail('its columns are not listed in it');
+  }
   const close = groupEnd(body, open, database);
   if (close === -1) fail('its column list is not closed');
   if (words(tokens(body, close, body.length, database)).includes('INHERITS')) {
@@ -126,10 +132,16 @@ function readTable(statement: string, parser: SqlParser, database: DatabaseDiale
     if (typeEnd === -1) typeEnd = item.length;
     const options = itemWords.slice(typeEnd);
 
+    const type = readType(parser, database, body, item.slice(1, typeEnd));
+
     columns.push({
       name: unquote(item[0].text),
-      type: readType(parser, database, body, item.slice(1, typeEnd)),
-      notNull: options.some((word, i) => word === 'NOT' && options[i + 1] === 'NULL'),
+      type,
+      // The database also makes an identity column, a SERIAL one and (MySQL) an AUTO_INCREMENT one NOT NULL.
+      notNull:
+        options.some((word, i) => (word === 'NULL' && options[i - 1] === 'NOT') || (word === 'IDENTITY' && options[i - 1] === 'AS')) ||
+        options.includes('AUTO_INCREMENT') ||
+        (database !== 'SQLite' && SERIAL.test(type.dataType)),
       // MySQL also takes a bare KEY in a column for its PRIMARY KEY.
       primaryKey: options.some(
         (word, i) => word === 'KEY' && (options[i - 1] === 'PRIMARY' || (database === 'MySQL' && options[i - 1] !== 'UNIQUE')),
