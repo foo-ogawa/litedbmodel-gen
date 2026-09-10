@@ -74,5 +74,8 @@
     "js-yaml": "^4.3.2",
     "csv-parse": "^7.0.2",
     "esbuild": "$esbuild"
+  },
+  "publishConfig": {
+    "tag": "release-0.7"
   }
 }

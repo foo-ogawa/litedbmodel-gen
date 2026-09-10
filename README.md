@@ -11,7 +11,7 @@ Code generator and LLM-powered development assistant for [litedbmodel](https://w
 ## Quick Start
 
 ```bash
-npm install -D litedbmodel-gen embedoc
+npm install -D litedbmodel-gen@0.7 embedoc
 npx embedoc init && npx litedbmodel-gen init
 
 # Generate model definitions from schema.sql
@@ -214,7 +214,7 @@ export type User = InstanceType<typeof User>;
 
 ```bash
 npx embedoc init
-npm install -D litedbmodel-gen
+npm install -D litedbmodel-gen@0.7
 npx litedbmodel-gen init
 ```
 
