@@ -2,7 +2,8 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    # v1.x is the litedbmodel 1.2 line; a pull request into it needs the same gate as one into main.
+    branches: [main, v1.x]
   workflow_dispatch:
 
 permissions:
