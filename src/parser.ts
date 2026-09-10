@@ -8,18 +8,28 @@ interface ParseSchemaOptions {
 
 type SqlParser = InstanceType<typeof Parser>;
 
-/**
- * A column type node-sql-parser cannot read, stood in for by a quoted placeholder while the
- * statement is parsed and put back afterwards — in the shape the parser gives the types it can read.
- */
-interface StandInType {
+/** A column type as node-sql-parser reads it. */
+interface ColumnType {
   dataType: string;
   length: number | undefined;
   isArray: boolean;
 }
 
-const STAND_IN = /^"__LMG_T(\d+)__"$/;
+/** A top-level token of a statement, as written. */
+interface Token {
+  text: string;
+  start: number;
+  end: number;
+}
 
+/**
+ * Reads the tables a schema defines. Each CREATE TABLE is read here, by its dialect's lexical rules:
+ * the table's name and each column's name, NOT NULL and PRIMARY KEY. node-sql-parser reads only each
+ * column's type, the name the type mapping is keyed on. Its grammar falls short of every database's —
+ * it rejects names they accept bare (`at`, `json`, `session` in PostgreSQL, which pg_dump writes
+ * unquoted), column options (`GENERATED ALWAYS AS IDENTITY`, a DEFAULT cast to a schema-qualified
+ * type) and types (`boolean[]`, `point`) — so no table is ever handed to it whole.
+ */
 export function parseSchema(
   sql: string,
   options?: ParseSchemaOptions,
@@ -28,146 +38,176 @@ export function parseSchema(
   const parser = new Parser();
 
   const tables: TableDef[] = [];
-
-  // Each statement is parsed on its own, and only CREATE TABLE reaches the parser. Given the whole
-  // file at once, node-sql-parser splits a dollar-quoted function body at its inner `;`, and any one
-  // statement it cannot read fails the call for every table in the file.
   for (const statement of splitStatements(sql, database)) {
-    if (!isCreateTable(statement, database)) continue;
-
-    // A table node-sql-parser reads as written is parsed as written. Only a table it cannot read has
-    // its unreadable column types stood in for, so no table that parses today is ever rewritten.
-    const stripped = stripCheckConstraints(statement, database);
-    const standIns: StandInType[] = [];
-    let s: Record<string, unknown>;
-    try {
-      s = parseTable(parser, database, stripped);
-    } catch {
-      try {
-        const readable = standInUnreadableTypes(quoteBracketedNames(stripped, database), parser, database, standIns);
-        s = parseTable(parser, database, readable);
-      } catch (error) {
-        // A table that cannot be read is an error, never an empty result: a model generated from it
-        // would silently lose every column.
-        throw new Error(
-          `Cannot parse the table ${tableNameOf(statement, database)}: ${(error as Error).message.split('\n')[0]}`,
-        );
-      }
-    }
-    if (s['type'] !== 'create' || s['keyword'] !== 'table') continue;
-
-    const tableName = extractTableName(s);
-    if (!tableName) continue;
-
-    const createDefs = s['create_definitions'] as unknown[] | null;
-    if (!createDefs) continue;
-
-    restoreStandInTypes(createDefs, standIns);
-
-    const pkColumns = extractTableLevelPrimaryKeys(createDefs);
-    const columns = extractColumns(createDefs, pkColumns, database);
-
-    tables.push({ name: tableName, columns });
+    const table = readTable(statement, parser, database);
+    if (table) tables.push(table);
   }
-
   return tables;
 }
 
-function parseTable(parser: SqlParser, database: DatabaseDialect, statement: string): Record<string, unknown> {
-  const result: unknown = parser.astify(statement, { database });
-  return (Array.isArray(result) ? result[0] : result) as Record<string, unknown>;
-}
+const NAME = String.raw`(?:"(?:[^"]|"")*"|\`(?:[^\`]|\`\`)*\`|\[[^\]]*\]|[\w$]+)`;
+const CREATE_TABLE = new RegExp(
+  String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(${NAME}(?:\s*\.\s*${NAME})*)`,
+  'i',
+);
 
-function extractTableName(stmt: Record<string, unknown>): string | null {
-  const table = stmt['table'];
-  if (!table) return null;
+/**
+ * Words that open a table constraint rather than a column. Each is reserved in its dialect, so a column
+ * of that name is always quoted — except PostgreSQL's EXCLUDE, a constraint only before USING or its
+ * element list (`exclude boolean` is a column).
+ */
+const TABLE_CONSTRAINT: Record<DatabaseDialect, ReadonlySet<string>> = {
+  PostgreSQL: new Set(['CONSTRAINT', 'PRIMARY', 'UNIQUE', 'FOREIGN', 'CHECK', 'EXCLUDE', 'LIKE']),
+  MySQL: new Set(['CONSTRAINT', 'PRIMARY', 'UNIQUE', 'FOREIGN', 'CHECK', 'KEY', 'INDEX', 'FULLTEXT', 'SPATIAL', 'LIKE']),
+  SQLite: new Set(['CONSTRAINT', 'PRIMARY', 'UNIQUE', 'FOREIGN', 'CHECK']),
+};
 
-  if (Array.isArray(table)) {
-    const first = table[0] as Record<string, unknown> | undefined;
-    return (first?.['table'] as string) ?? null;
+/** Words that end a column's type by opening one of its constraints or options. */
+const COLUMN_OPTION_COMMON = ['CONSTRAINT', 'NOT', 'NULL', 'DEFAULT', 'PRIMARY', 'UNIQUE', 'CHECK', 'REFERENCES', 'COLLATE', 'GENERATED'];
+const COLUMN_OPTION: Record<DatabaseDialect, ReadonlySet<string>> = {
+  PostgreSQL: new Set([...COLUMN_OPTION_COMMON, 'STORAGE', 'COMPRESSION']),
+  MySQL: new Set([
+    ...COLUMN_OPTION_COMMON, 'AS', 'KEY', 'AUTO_INCREMENT', 'ON', 'VISIBLE', 'INVISIBLE', 'COMMENT',
+    'COLUMN_FORMAT', 'ENGINE_ATTRIBUTE', 'SECONDARY_ENGINE_ATTRIBUTE', 'STORAGE', 'SRID',
+  ]),
+  SQLite: new Set([...COLUMN_OPTION_COMMON, 'AS']),
+};
+
+/** The SERIAL types, which the database makes NOT NULL (PostgreSQL's family, and MySQL's SERIAL). */
+const SERIAL = /^(?:SMALL|BIG)?SERIAL[248]?$/i;
+
+/**
+ * The table a CREATE TABLE defines, or null for any other statement and for a partition, which is part
+ * of its parent table.
+ */
+function readTable(statement: string, parser: SqlParser, database: DatabaseDialect): TableDef | null {
+  const body = withoutLeadingComments(statement, database);
+  const match = CREATE_TABLE.exec(body);
+  if (!match) return null;
+
+  // A table that cannot be read is an error, never a table with fewer columns: a model generated from
+  // it would silently lose them.
+  const fail = (reason: string): never => {
+    throw new Error(`Cannot parse the table ${match[1]}: ${reason}`);
+  };
+
+  let open = match[0].length;
+  while (open < body.length && /\s/.test(body[open])) open++;
+  if (body[open] !== '(') {
+    if (words(tokens(body, open, body.length, database)).slice(0, 2).join(' ') === 'PARTITION OF') return null;
+    fail('its columns are not listed in it');
   }
-  return (table as Record<string, unknown>)['table'] as string ?? null;
-}
+  const close = groupEnd(body, open, database);
+  if (close === -1) fail('its column list is not closed');
+  if (words(tokens(body, close, body.length, database)).includes('INHERITS')) {
+    fail('INHERITS takes columns from another table');
+  }
 
-function extractTableLevelPrimaryKeys(defs: unknown[]): Set<string> {
-  const pkColumns = new Set<string>();
+  const primaryKey = new Set<string>();
+  const columns: { name: string; type: ColumnType; notNull: boolean; primaryKey: boolean }[] = [];
 
-  for (const def of defs) {
-    const d = def as Record<string, unknown>;
-    if (d['resource'] !== 'constraint') continue;
+  for (const item of splitAtCommas(tokens(body, open + 1, close - 1, database))) {
+    if (item.length === 0) continue;
+    const itemWords = words(item);
 
-    const constraintType = String(d['constraint_type'] || '').toLowerCase();
-    if (constraintType !== 'primary key') continue;
-
-    const definition = d['definition'] as unknown[];
-    if (!definition) continue;
-
-    for (const col of definition) {
-      const c = col as Record<string, unknown>;
-      const colName = extractColumnName(c);
-      if (colName) pkColumns.add(colName);
+    if (
+      TABLE_CONSTRAINT[database].has(itemWords[0]) &&
+      (itemWords[0] !== 'EXCLUDE' || itemWords[1] === 'USING' || item[1]?.text[0] === '(')
+    ) {
+      if (itemWords[0] === 'LIKE') fail('LIKE takes columns from another table');
+      const key = itemWords.findIndex((word, i) => word === 'PRIMARY' && itemWords[i + 1] === 'KEY');
+      const list = key === -1 ? undefined : item.slice(key + 2).find((token) => token.text[0] === '(');
+      if (list) {
+        for (const part of splitAtCommas(tokens(body, list.start + 1, list.end - 1, database))) {
+          if (part.length) primaryKey.add(unquote(part[0].text));
+        }
+      }
+      continue;
     }
+
+    if (!/^[\w$]/.test(item[0].text) && !NAME_QUOTES[database].includes(item[0].text[0])) {
+      fail(`'${item[0].text}' does not start a column name in ${database}`);
+    }
+    let typeEnd = item.findIndex((token, i) => i > 0 && COLUMN_OPTION[database].has(itemWords[i]));
+    if (typeEnd === -1) typeEnd = item.length;
+    const options = itemWords.slice(typeEnd);
+
+    const type = readType(parser, database, body, item.slice(1, typeEnd));
+
+    columns.push({
+      name: unquote(item[0].text),
+      type,
+      // The database also makes an identity column, a SERIAL one and (MySQL) an AUTO_INCREMENT one NOT NULL.
+      notNull:
+        options.some((word, i) => (word === 'NULL' && options[i - 1] === 'NOT') || (word === 'IDENTITY' && options[i - 1] === 'AS')) ||
+        options.includes('AUTO_INCREMENT') ||
+        (database !== 'SQLite' && SERIAL.test(type.dataType)),
+      // MySQL also takes a bare KEY in a column for its PRIMARY KEY.
+      primaryKey: options.some(
+        (word, i) => word === 'KEY' && (options[i - 1] === 'PRIMARY' || (database === 'MySQL' && options[i - 1] !== 'UNIQUE')),
+      ),
+    });
   }
 
-  return pkColumns;
+  const tableName = tokens(match[1], 0, match[1].length, database).filter((token) => token.text !== '.').at(-1)!;
+  return {
+    name: unquote(tableName.text),
+    columns: columns.map((column): ColumnDef => {
+      const isPrimaryKey = column.primaryKey || primaryKey.has(column.name);
+      const { dataType, length, isArray } = column.type;
+      return {
+        name: column.name,
+        sqlType: normalizeSqlType(dataType, length, isArray, database),
+        isPrimaryKey,
+        isNullable: !isPrimaryKey && !column.notNull,
+        isArray,
+      };
+    }),
+  };
 }
 
-function extractColumnName(ref: Record<string, unknown>): string | null {
-  const col = ref['column'];
-  if (typeof col === 'string') return col;
-  if (col && typeof col === 'object') {
-    return (col as Record<string, unknown>)['expr']
-      ? String(((col as Record<string, unknown>)['expr'] as Record<string, unknown>)['value'])
-      : null;
-  }
-  return null;
+/**
+ * node-sql-parser's reading of a column type. An array type it rejects (`boolean[]`) is read through its
+ * element type, so it normalizes exactly as an array of a type it accepts; a type it does not know
+ * (`point`, `public.citext`) keeps its own name, without its length or precision. A column with no type
+ * (SQLite allows one) has an empty one.
+ */
+function readType(parser: SqlParser, database: DatabaseDialect, sql: string, type: Token[]): ColumnType {
+  if (type.length === 0) return { dataType: '', length: undefined, isArray: false };
+  const read = parseType(parser, database, sql.slice(type[0].start, type[type.length - 1].end));
+  if (read) return read;
+
+  let element = type.length;
+  while (element > 1 && type[element - 1].text[0] === '[') element--;
+  const isArray = element < type.length;
+  const readElement = isArray ? parseType(parser, database, sql.slice(type[0].start, type[element - 1].end)) : null;
+  if (readElement) return { ...readElement, isArray };
+
+  const name = type
+    .slice(0, element)
+    .filter((token) => token.text[0] !== '(')
+    .map((token) => token.text)
+    .join(' ')
+    .replace(/ ?\. ?/g, '.');
+  return { dataType: name.toUpperCase(), length: undefined, isArray };
 }
 
-function extractColumns(
-  defs: unknown[],
-  pkColumns: Set<string>,
-  database: DatabaseDialect,
-): ColumnDef[] {
-  const columns: ColumnDef[] = [];
-
-  for (const def of defs) {
-    const d = def as Record<string, unknown>;
-    if (d['resource'] !== 'column') continue;
-
-    const colRef = d['column'] as Record<string, unknown>;
-    const name = extractColumnName(colRef);
-    if (!name) continue;
-
-    const definition = d['definition'] as Record<string, unknown>;
-    const rawDataType = String(definition?.['dataType'] || '').toUpperCase();
-    const length = definition?.['length'] as number | undefined;
-    const arrayObj = definition?.['array'];
-
-    // Arrays are represented in two ways by node-sql-parser:
-    // 1. dataType ends with "[]" (e.g. "TEXT[]")
-    // 2. array property is an object with dimension (e.g. INTEGER[])
-    const isArrayFromSuffix = rawDataType.endsWith('[]');
-    const isArrayFromProp = !!arrayObj;
-    const isArray = isArrayFromSuffix || isArrayFromProp;
-
-    const dataType = isArrayFromSuffix ? rawDataType.slice(0, -2) : rawDataType;
-    const sqlType = normalizeSqlType(dataType, length, isArray, database);
-
-    const isPrimaryKey =
-      pkColumns.has(name) ||
-      d['primary_key'] === 'primary key' ||
-      d['primary'] === 'key' ||
-      d['primary'] === 'primary key';
-
-    const nullable = d['nullable'] as Record<string, unknown> | undefined;
-    const isNullable = isPrimaryKey
-      ? false
-      : nullable?.['type'] !== 'not null';
-
-    columns.push({ name, sqlType, isPrimaryKey, isNullable, isArray });
+function parseType(parser: SqlParser, database: DatabaseDialect, type: string): ColumnType | null {
+  try {
+    const result: unknown = parser.astify(`CREATE TABLE lmg_probe (c ${type});`, { database });
+    const stmt = (Array.isArray(result) ? result[0] : result) as Record<string, unknown>;
+    const def = (stmt['create_definitions'] as Record<string, unknown>[])[0]['definition'] as Record<string, unknown>;
+    // node-sql-parser gives an array type either as a `[]` suffix (TEXT[]) or as an `array` property (INTEGER[]).
+    const dataType = String(def['dataType'] ?? '');
+    const suffixed = dataType.endsWith('[]');
+    return {
+      dataType: suffixed ? dataType.slice(0, -2) : dataType,
+      length: def['length'] as number | undefined,
+      isArray: suffixed || !!def['array'],
+    };
+  } catch {
+    return null;
   }
-
-  return columns;
 }
 
 function normalizeSqlType(
@@ -189,6 +229,89 @@ function normalizeSqlType(
   return base;
 }
 
+/** A name without its quotes, a doubled quote inside it read as one; a bare name as written. */
+function unquote(name: string): string {
+  const quote = name[0];
+  if (quote === '"' || quote === '`') return name.slice(1, -1).split(quote + quote).join(quote);
+  if (quote === '[') return name.slice(1, -1);
+  return name;
+}
+
+/** Each token's text in upper case, so a bare keyword compares equal whatever case it is written in. */
+function words(list: Token[]): string[] {
+  return list.map((token) => token.text.toUpperCase());
+}
+
+/**
+ * The tokens between `from` and `to`: each word, quoted name and string, each parenthesized or
+ * bracketed group as one token, and each other character. Comments are skipped. Only the top level is
+ * tokenized, so `CHECK (x IS NOT NULL)`, `DEFAULT 'NOT NULL'` and `-- NOT NULL` never read as NOT NULL.
+ */
+function tokens(sql: string, from: number, to: number, database: DatabaseDialect): Token[] {
+  const list: Token[] = [];
+  let i = from;
+
+  while (i < to) {
+    if (/\s/.test(sql[i])) {
+      i++;
+      continue;
+    }
+    const comment = commentEnd(sql, i, database);
+    if (comment > i) {
+      i = comment;
+      continue;
+    }
+
+    let end = skipQuotedOrComment(sql, i, database);
+    if (end === i) {
+      if (/[\w$]/.test(sql[i])) {
+        while (end < to && /[\w$]/.test(sql[end])) end++;
+      } else if (sql[i] === '(' || sql[i] === '[') {
+        end = groupEnd(sql, i, database);
+        if (end === -1) end = to;
+      } else {
+        end = i + 1;
+      }
+    }
+    end = Math.min(end, to);
+    list.push({ text: sql.slice(i, end), start: i, end });
+    i = end;
+  }
+  return list;
+}
+
+/** The tokens split into the items a top-level comma separates. */
+function splitAtCommas(list: Token[]): Token[][] {
+  const items: Token[][] = [[]];
+  for (const token of list) {
+    if (token.text === ',') items.push([]);
+    else items[items.length - 1].push(token);
+  }
+  return items;
+}
+
+/**
+ * The index just past the parenthesis or bracket that closes the one at `open`, or -1 when none does.
+ * Brackets nest like parentheses: `DEFAULT ARRAY[1, 2]` is one group.
+ */
+function groupEnd(sql: string, open: number, database: DatabaseDialect): number {
+  let depth = 0;
+  let i = open;
+  while (i < sql.length) {
+    const skipped = skipQuotedOrComment(sql, i, database);
+    if (skipped > i) {
+      i = skipped;
+      continue;
+    }
+    if (sql[i] === '(' || sql[i] === '[') depth++;
+    else if ((sql[i] === ')' || sql[i] === ']') && --depth === 0) return i + 1;
+    i++;
+  }
+  return -1;
+}
+
+/** The characters that quote a name in each dialect. */
+const NAME_QUOTES: Record<DatabaseDialect, string> = { PostgreSQL: '"', MySQL: '"`', SQLite: '"`[' };
 
 /**
  * The index just past the string, quoted identifier, dollar-quoted body or comment that starts at
@@ -203,7 +326,7 @@ function skipQuotedOrComment(sql: string, i: number, database: DatabaseDialect):
 
   const ch = sql[i];
 
-  if (ch === "'" || ch === '"' || ch === '`') {
+  if (ch === "'" || (ch !== '[' && NAME_QUOTES[database].includes(ch))) {
     // Every quote honours its own character doubled. MySQL strings also honour backslash escapes, and
     // so does a PostgreSQL E'…' string.
     const escapes =
@@ -223,7 +346,7 @@ function skipQuotedOrComment(sql: string, i: number, database: DatabaseDialect):
     return j;
   }
 
-  if (ch === '[' && database === 'SQLite') {
+  if (ch === '[' && NAME_QUOTES[database].includes(ch)) {
     const close = sql.indexOf(']', i + 1);
     return close === -1 ? sql.length : close + 1;
   }
@@ -281,7 +404,7 @@ function commentEnd(sql: string, i: number, database: DatabaseDialect): number {
  * dollar-quoted body or a comment — a function body is full of them, and a pg_dump comment
  * (`-- Name: users; Type: TABLE`) carries one too.
  */
-export function splitStatements(sql: string, database: DatabaseDialect = 'PostgreSQL'): string[] {
+function splitStatements(sql: string, database: DatabaseDialect): string[] {
   const statements: string[] = [];
   let start = 0;
   let i = 0;
@@ -311,277 +434,4 @@ function withoutLeadingComments(statement: string, database: DatabaseDialect): s
     if (end === i) return statement.slice(i);
     i = end;
   }
-}
-
-const NAME = String.raw`(?:"(?:[^"]|"")*"|\`(?:[^\`]|\`\`)*\`|\[[^\]]*\]|[\w$]+)`;
-const CREATE_TABLE = new RegExp(
-  String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(${NAME}(?:\s*\.\s*${NAME})*)`,
-  'i',
-);
-
-function isCreateTable(statement: string, database: DatabaseDialect): boolean {
-  return CREATE_TABLE.test(withoutLeadingComments(statement, database));
-}
-
-function tableNameOf(statement: string, database: DatabaseDialect): string {
-  return CREATE_TABLE.exec(withoutLeadingComments(statement, database))?.[1] ?? '(unnamed)';
-}
-
-/** Where the column list of a CREATE TABLE opens and closes, or null when it has none. */
-function columnList(statement: string, database: DatabaseDialect): [number, number] | null {
-  const body = withoutLeadingComments(statement, database);
-  const match = CREATE_TABLE.exec(body);
-  if (!match) return null;
-
-  let open = statement.length - body.length + match[0].length;
-  while (open < statement.length && /\s/.test(statement[open])) open++;
-  if (statement[open] !== '(') return null; // CREATE TABLE … AS / PARTITION OF / OF type
-
-  let depth = 0;
-  let i = open;
-  while (i < statement.length) {
-    const skipped = skipQuotedOrComment(statement, i, database);
-    if (skipped > i) {
-      i = skipped;
-      continue;
-    }
-    if (statement[i] === '(') depth++;
-    else if (statement[i] === ')' && --depth === 0) return [open, i];
-    i++;
-  }
-  return null;
-}
-
-/** The `[start, end)` ranges of the comma-separated items inside the column list. */
-function columnListItems(
-  statement: string,
-  [open, close]: [number, number],
-  database: DatabaseDialect,
-): [number, number][] {
-  const items: [number, number][] = [];
-  let depth = 0;
-  let start = open + 1;
-  let i = start;
-
-  while (i < close) {
-    const skipped = skipQuotedOrComment(statement, i, database);
-    if (skipped > i) {
-      i = skipped;
-      continue;
-    }
-    // Brackets nest like parentheses: `DEFAULT ARRAY[1, 2]` is one item.
-    if (statement[i] === '(' || statement[i] === '[') depth++;
-    else if (statement[i] === ')' || statement[i] === ']') depth--;
-    else if (statement[i] === ',' && depth === 0) {
-      items.push([start, i]);
-      start = i + 1;
-    }
-    i++;
-  }
-
-  items.push([start, close]);
-  return items;
-}
-
-const TABLE_CONSTRAINT = /^(?:CONSTRAINT|PRIMARY|UNIQUE|FOREIGN|CHECK|EXCLUDE|LIKE)\b/i;
-const COLUMN_CONSTRAINT = /^\s+(?:NOT|NULL|DEFAULT|PRIMARY|REFERENCES|UNIQUE|CHECK|CONSTRAINT|COLLATE|GENERATED)\b/i;
-
-/** Where the type of the column defined by `[from, to)` starts and ends, or null for a table constraint. */
-function columnTypeRange(
-  statement: string,
-  from: number,
-  to: number,
-  database: DatabaseDialect,
-): [number, number] | null {
-  let i = from;
-  while (i < to && /\s/.test(statement[i])) i++;
-  if (TABLE_CONSTRAINT.test(statement.slice(i, to))) return null;
-
-  const quoted = skipQuotedOrComment(statement, i, database);
-  if (quoted > i) i = quoted;
-  else while (i < to && /[\w$]/.test(statement[i])) i++;
-  while (i < to && /\s/.test(statement[i])) i++;
-
-  const start = i;
-  let depth = 0;
-  let end = to;
-  while (i < to) {
-    const skipped = skipQuotedOrComment(statement, i, database);
-    if (skipped > i) {
-      i = skipped;
-      continue;
-    }
-    if (statement[i] === '(' || statement[i] === '[') depth++;
-    else if (statement[i] === ')' || statement[i] === ']') depth--;
-    else if (depth === 0 && COLUMN_CONSTRAINT.test(statement.slice(i, to))) {
-      end = i;
-      break;
-    }
-    i++;
-  }
-
-  while (end > start && /\s/.test(statement[end - 1])) end--;
-  return end > start ? [start, end] : null;
-}
-
-/** node-sql-parser's reading of a column type, or null when it cannot read it. */
-function readType(parser: SqlParser, database: DatabaseDialect, type: string): StandInType | null {
-  try {
-    const result: unknown = parser.astify(`CREATE TABLE lmg_probe (c ${type});`, { database });
-    const stmt = (Array.isArray(result) ? result[0] : result) as Record<string, unknown>;
-    const def = (stmt['create_definitions'] as Record<string, unknown>[])[0]['definition'] as Record<string, unknown>;
-    return {
-      dataType: String(def['dataType']),
-      length: def['length'] as number | undefined,
-      isArray: !!def['array'] || String(def['dataType']).endsWith('[]'),
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Replaces each column type node-sql-parser cannot read with a quoted placeholder it can, recording
- * what the type was. An array reads its element type through the parser, so it normalizes exactly as
- * an array of a type the parser does read; a type the parser does not know at all keeps its own name.
- */
-function standInUnreadableTypes(
-  statement: string,
-  parser: SqlParser,
-  database: DatabaseDialect,
-  standIns: StandInType[],
-): string {
-  const list = columnList(statement, database);
-  if (!list) return statement;
-
-  const edits: [number, number, string][] = [];
-  for (const [from, to] of columnListItems(statement, list, database)) {
-    const range = columnTypeRange(statement, from, to, database);
-    if (!range) continue;
-
-    const type = statement.slice(range[0], range[1]);
-    if (readType(parser, database, type)) continue;
-
-    const element = type.replace(/(?:\s*\[\s*\d*\s*\])+$/, '');
-    const isArray = element !== type;
-    const read = readType(parser, database, element);
-    standIns.push({
-      dataType: read ? read.dataType : element.replace(/\s*\(.*\)\s*$/, '').replace(/\s+/g, ' ').toUpperCase(),
-      length: read?.length,
-      isArray,
-    });
-    edits.push([range[0], range[1], `"__lmg_t${standIns.length - 1}__"`]);
-  }
-
-  let result = statement;
-  for (const [start, end, placeholder] of edits.reverse()) {
-    result = result.slice(0, start) + placeholder + result.slice(end);
-  }
-  return result;
-}
-
-/**
- * SQLite's `[name]` as the `"name"` it means: node-sql-parser's SQLite grammar reads the second and
- * not the first. Brackets are only ever a name in SQLite, which has no array types.
- */
-function quoteBracketedNames(statement: string, database: DatabaseDialect): string {
-  if (database !== 'SQLite') return statement;
-
-  let result = '';
-  let i = 0;
-  while (i < statement.length) {
-    if (statement[i] === '[') {
-      const close = statement.indexOf(']', i + 1);
-      if (close === -1) return result + statement.slice(i);
-      result += `"${statement.slice(i + 1, close).replace(/"/g, '""')}"`;
-      i = close + 1;
-      continue;
-    }
-    const skipped = skipQuotedOrComment(statement, i, database);
-    const end = skipped > i ? skipped : i + 1;
-    result += statement.slice(i, end);
-    i = end;
-  }
-  return result;
-}
-
-/** Puts each placeholder's recorded type back into the parsed column definitions. */
-function restoreStandInTypes(defs: unknown[], standIns: StandInType[]): void {
-  for (const def of defs) {
-    const definition = (def as Record<string, unknown>)['definition'] as Record<string, unknown> | undefined;
-    if (!definition) continue;
-
-    const match = STAND_IN.exec(String(definition['dataType'] ?? '').toUpperCase());
-    if (!match) continue;
-
-    const standIn = standIns[Number(match[1])];
-    definition['dataType'] = standIn.dataType;
-    definition['length'] = standIn.length;
-    definition['array'] = standIn.isArray ? { dimension: 1 } : undefined;
-  }
-}
-
-/**
- * Removes CHECK constraint clauses from SQL before parsing.
- * node-sql-parser cannot handle PostgreSQL-specific operators (e.g. ~ ~* !~ !~*)
- * inside CHECK expressions, and CHECK constraints are irrelevant for model generation.
- */
-export function stripCheckConstraints(sql: string, database: DatabaseDialect = 'PostgreSQL'): string {
-  const pattern =
-    /(?:CONSTRAINT\s+(?:"[^"]+"|[^\s(]+)\s+)?CHECK\s*\(/gi;
-
-  const ranges: [number, number][] = [];
-  let match;
-
-  while ((match = pattern.exec(sql)) !== null) {
-    let start = match.index;
-
-    // Balance parentheses from the opening (
-    let depth = 1;
-    let pos = start + match[0].length;
-
-    while (pos < sql.length && depth > 0) {
-      const skipped = skipQuotedOrComment(sql, pos, database);
-      if (skipped > pos) {
-        pos = skipped;
-        continue;
-      }
-      if (sql[pos] === '(') depth++;
-      else if (sql[pos] === ')') depth--;
-      pos++;
-    }
-
-    let end = pos;
-
-    // A table-level CHECK is an item of its own, so one comma goes with it to keep the list valid.
-    // A column-level CHECK sits inside its column's item: the comma after it separates that column
-    // from the next item, and taking it would fuse the two.
-    let lb = start - 1;
-    while (lb >= 0 && /\s/.test(sql[lb])) lb--;
-
-    if (lb >= 0 && sql[lb] === ',') {
-      start = lb;
-    } else if (lb >= 0 && sql[lb] === '(') {
-      let tf = end;
-      while (tf < sql.length && /\s/.test(sql[tf])) tf++;
-      if (tf < sql.length && sql[tf] === ',') {
-        end = tf + 1;
-      }
-    }
-
-    ranges.push([start, end]);
-    pattern.lastIndex = end;
-  }
-
-  if (ranges.length === 0) return sql;
-
-  let result = '';
-  let lastEnd = 0;
-  for (const [s, e] of ranges) {
-    result += sql.slice(lastEnd, s);
-    lastEnd = e;
-  }
-  result += sql.slice(lastEnd);
-
-  return result;
 }
