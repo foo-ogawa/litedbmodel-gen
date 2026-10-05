@@ -241,6 +241,8 @@ datasources:
     type: sql_schema
     path: "./db/schema.sql"       # your DDL file
     database: PostgreSQL           # PostgreSQL | MySQL | SQLite
+    # model_classes:               # optional: class of a table whose plural no rule resolves
+    #   invitation_code_uses: InvitationCodeUse
     generators:
       - output_path: "./models/{model_class}.ts"
         template: model.hbs
