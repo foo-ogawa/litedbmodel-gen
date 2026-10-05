@@ -8,13 +8,14 @@ export const sqlSchema = defineDatasource({
   async create(config) {
     const filePath = config['path'] as string;
     const database = (config['database'] as DatabaseDialect) || 'PostgreSQL';
+    const modelClasses = (config['model_classes'] as Record<string, string> | undefined) ?? {};
 
     const sql = readFileSync(filePath, 'utf-8');
     const tables = parseSchema(sql, { database });
 
     const records = tables.map(t => ({
       table_name: t.name,
-      model_class: tableNameToModelClass(t.name),
+      model_class: tableNameToModelClass(t.name, modelClasses),
       columns: t.columns,
     }));
 
