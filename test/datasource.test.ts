@@ -87,6 +87,38 @@ describe('sqlSchema datasource', () => {
     expect((all[2] as Record<string, unknown>)['model_class']).toBe('PostTag');
   });
 
+  it('singularizes -yses tables to -ysis', async () => {
+    const schemaPath = join(TMP_DIR, 'yses.sql');
+    writeFileSync(schemaPath, `
+      CREATE TABLE patient_analyses (id SERIAL PRIMARY KEY);
+      CREATE TABLE campaign_statuses (id SERIAL PRIMARY KEY);
+      CREATE TABLE addresses (id SERIAL PRIMARY KEY);
+    `);
+
+    const ds = await sqlSchema.create({ type: 'sql_schema', path: schemaPath, database: 'PostgreSQL' });
+
+    const all = await ds.getAll();
+    expect(all.map(r => (r as Record<string, unknown>)['model_class'])).toEqual(['PatientAnalysis', 'CampaignStatus', 'Address']);
+  });
+
+  it('takes the model class of a table from model_classes when given', async () => {
+    const schemaPath = join(TMP_DIR, 'overrides.sql');
+    writeFileSync(schemaPath, `
+      CREATE TABLE invitation_code_uses (id SERIAL PRIMARY KEY);
+      CREATE TABLE campaign_statuses (id SERIAL PRIMARY KEY);
+    `);
+
+    const ds = await sqlSchema.create({
+      type: 'sql_schema',
+      path: schemaPath,
+      database: 'PostgreSQL',
+      model_classes: { invitation_code_uses: 'InvitationCodeUse' },
+    });
+
+    const all = await ds.getAll();
+    expect(all.map(r => (r as Record<string, unknown>)['model_class'])).toEqual(['InvitationCodeUse', 'CampaignStatus']);
+  });
+
   it('works with MySQL dialect', async () => {
     const schemaPath = join(TMP_DIR, 'mysql_schema.sql');
     writeFileSync(schemaPath, `
