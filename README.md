@@ -276,7 +276,7 @@ npx embedoc watch
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
 | `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `Date` |
 | `DATE` | `@column.date()` | `string` |
-| `JSON`, `JSONB` | `@column.json<Record<string, unknown>>()` | `Record<string, unknown>` |
+| `JSON`, `JSONB` | `@column.json<unknown>()` | `unknown` (any JSON value — an array or an object; decode it at the read boundary) |
 | `UUID` | `@column.uuid()` | `string` |
 
 #### PostgreSQL Arrays

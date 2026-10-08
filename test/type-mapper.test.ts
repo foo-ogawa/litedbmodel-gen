@@ -82,8 +82,8 @@ describe('mapColumnType', () => {
   describe('JSON types', () => {
     it.each(['json', 'jsonb'])('%s → json', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
-      expect(result.decorator).toBe('@column.json<Record<string, unknown>>()');
-      expect(result.tsType).toBe('Record<string, unknown>');
+      expect(result.decorator).toBe('@column.json<unknown>()');
+      expect(result.tsType).toBe('unknown');
     });
   });
 
