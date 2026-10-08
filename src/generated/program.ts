@@ -101,7 +101,8 @@ export function createProgram(
     .action(async (commands: string[], opts: { all?: boolean; includeMeta?: boolean; format?: string }) => {
       if (commands.length === 0 && !opts.all) {
         process.stderr.write(JSON.stringify({ code: "INVALID_ARGS", message: "Specify command IDs or use --all" }) + "\n");
-        process.exit(2);
+        process.exitCode = 2;
+        return;
       }
 
       const format = opts.format || "yaml";
@@ -171,7 +172,7 @@ export function createProgram(
         if (doc.components) filtered.components = doc.components;
         process.stdout.write(JSON.stringify(filtered, null, 2) + "\n");
       }
-      process.exit(0);
+      process.exitCode = 0;
     });
   return program;
 }

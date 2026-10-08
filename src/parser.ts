@@ -22,6 +22,15 @@ interface Token {
   end: number;
 }
 
+/** A table as its statements define it, before its columns are reported. */
+interface ReadTable {
+  /** Each part of its name, without quotes: `public.users` is `['public', 'users']`. */
+  name: string[];
+  columns: { name: string; type: ColumnType; notNull: boolean; primaryKey: boolean }[];
+  /** The columns a PRIMARY KEY constraint lists, in the CREATE TABLE or in an ALTER TABLE after it. */
+  primaryKey: Set<string>;
+}
+
 /**
  * Reads the tables a schema defines. Each CREATE TABLE is read here, by its dialect's lexical rules:
  * the table's name and each column's name, NOT NULL and PRIMARY KEY. node-sql-parser reads only each
@@ -29,6 +38,9 @@ interface Token {
  * it rejects names they accept bare (`at`, `json`, `session` in PostgreSQL, which pg_dump writes
  * unquoted), column options (`GENERATED ALWAYS AS IDENTITY`, a DEFAULT cast to a schema-qualified
  * type) and types (`boolean[]`, `point`) — so no table is ever handed to it whole.
+ *
+ * A PRIMARY KEY an ALTER TABLE adds is the table's as much as one in its CREATE TABLE: pg_dump writes
+ * every primary key that way.
  */
 export function parseSchema(
   sql: string,
@@ -37,19 +49,30 @@ export function parseSchema(
   const database = options?.database || 'PostgreSQL';
   const parser = new Parser();
 
-  const tables: TableDef[] = [];
+  const tables: ReadTable[] = [];
   for (const statement of splitStatements(sql, database)) {
-    const table = readTable(statement, parser, database);
-    if (table) tables.push(table);
+    const body = withoutLeadingComments(statement, database);
+    const table = readTable(body, parser, database);
+    if (table) {
+      tables.push(table);
+      continue;
+    }
+    const added = readAddedPrimaryKey(body, database);
+    if (added) {
+      const target = findTable(tables, added.table);
+      for (const column of added.columns) target?.primaryKey.add(column);
+    }
   }
-  return tables;
+  return tables.map((table) => tableDef(table, database));
 }
 
 const NAME = String.raw`(?:"(?:[^"]|"")*"|\`(?:[^\`]|\`\`)*\`|\[[^\]]*\]|[\w$]+)`;
+const QUALIFIED_NAME = String.raw`${NAME}(?:\s*\.\s*${NAME})*`;
 const CREATE_TABLE = new RegExp(
-  String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(${NAME}(?:\s*\.\s*${NAME})*)`,
+  String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(${QUALIFIED_NAME})`,
   'i',
 );
+const ALTER_TABLE = new RegExp(String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(${QUALIFIED_NAME})`, 'i');
 
 /**
  * Words that open a table constraint rather than a column. Each is reserved in its dialect, so a column
@@ -80,8 +103,7 @@ const SERIAL = /^(?:SMALL|BIG)?SERIAL[248]?$/i;
  * The table a CREATE TABLE defines, or null for any other statement and for a partition, which is part
  * of its parent table.
  */
-function readTable(statement: string, parser: SqlParser, database: DatabaseDialect): TableDef | null {
-  const body = withoutLeadingComments(statement, database);
+function readTable(body: string, parser: SqlParser, database: DatabaseDialect): ReadTable | null {
   const match = CREATE_TABLE.exec(body);
   if (!match) return null;
 
@@ -104,24 +126,15 @@ function readTable(statement: string, parser: SqlParser, database: DatabaseDiale
   }
 
   const primaryKey = new Set<string>();
-  const columns: { name: string; type: ColumnType; notNull: boolean; primaryKey: boolean }[] = [];
+  const columns: ReadTable['columns'] = [];
 
   for (const item of splitAtCommas(tokens(body, open + 1, close - 1, database))) {
     if (item.length === 0) continue;
     const itemWords = words(item);
 
-    if (
-      TABLE_CONSTRAINT[database].has(itemWords[0]) &&
-      (itemWords[0] !== 'EXCLUDE' || itemWords[1] === 'USING' || item[1]?.text[0] === '(')
-    ) {
+    if (isTableConstraint(item, database)) {
       if (itemWords[0] === 'LIKE') fail('LIKE takes columns from another table');
-      const key = itemWords.findIndex((word, i) => word === 'PRIMARY' && itemWords[i + 1] === 'KEY');
-      const list = key === -1 ? undefined : item.slice(key + 2).find((token) => token.text[0] === '(');
-      if (list) {
-        for (const part of splitAtCommas(tokens(body, list.start + 1, list.end - 1, database))) {
-          if (part.length) primaryKey.add(unquote(part[0].text));
-        }
-      }
+      for (const column of primaryKeyColumns(item, body, database, fail)) primaryKey.add(column);
       continue;
     }
 
@@ -149,11 +162,84 @@ function readTable(statement: string, parser: SqlParser, database: DatabaseDiale
     });
   }
 
-  const tableName = tokens(match[1], 0, match[1].length, database).filter((token) => token.text !== '.').at(-1)!;
+  return { name: qualifiedName(match[1], database), columns, primaryKey };
+}
+
+/**
+ * The table an ALTER TABLE names and the columns of each PRIMARY KEY it adds, or null for any other
+ * statement and for an ALTER TABLE that adds none.
+ */
+function readAddedPrimaryKey(body: string, database: DatabaseDialect): { table: string[]; columns: string[] } | null {
+  const match = ALTER_TABLE.exec(body);
+  if (!match) return null;
+
+  const fail = (reason: string): never => {
+    throw new Error(`Cannot parse the ALTER TABLE of ${match[1]}: ${reason}`);
+  };
+
+  const actions = tokens(body, match[0].length, body.length, database);
+  // `name *` names the table with its descendants, as a bare name does.
+  if (actions[0]?.text === '*') actions.shift();
+  const columns = splitAtCommas(actions).flatMap((action) => {
+    const added = words(action)[0] === 'ADD' ? action.slice(1) : [];
+    return added.length && isTableConstraint(added, database) ? primaryKeyColumns(added, body, database, fail) : [];
+  });
+  return columns.length ? { table: qualifiedName(match[1], database), columns } : null;
+}
+
+/** Whether an item of a column list, or what an ALTER TABLE adds, is a table constraint rather than a column. */
+function isTableConstraint(item: Token[], database: DatabaseDialect): boolean {
+  const [first, second] = words(item.slice(0, 2));
+  return TABLE_CONSTRAINT[database].has(first) && (first !== 'EXCLUDE' || second === 'USING' || item[1]?.text[0] === '(');
+}
+
+/** The columns a table constraint's PRIMARY KEY lists; none for any other constraint. */
+function primaryKeyColumns(
+  constraint: Token[],
+  sql: string,
+  database: DatabaseDialect,
+  fail: (reason: string) => never,
+): string[] {
+  const constraintWords = words(constraint);
+  const key = constraintWords.findIndex((word, i) => word === 'PRIMARY' && constraintWords[i + 1] === 'KEY');
+  if (key === -1) return [];
+  const list = constraint.slice(key + 2).find((token) => token.text[0] === '(');
+  if (!list) fail('its PRIMARY KEY lists no columns');
+  return splitAtCommas(tokens(sql, list.start + 1, list.end - 1, database))
+    .filter((part) => part.length)
+    .map((part) => unquote(part[0].text));
+}
+
+/**
+ * The table an ALTER TABLE names, resolved as the database resolves a bare name: in any case, and with
+ * or without its schema. None for a table the schema does not define, such as a partition.
+ */
+function findTable(tables: ReadTable[], name: string[]): ReadTable | undefined {
+  const named = (table: ReadTable) => {
+    const parts = Math.min(table.name.length, name.length);
+    const own = table.name.slice(-parts);
+    return name.slice(-parts).every((part, i) => part.toLowerCase() === own[i].toLowerCase());
+  };
+  const found = tables.filter(named);
+  if (found.length > 1) {
+    throw new Error(`Cannot tell which table ALTER TABLE ${name.join('.')} names: ${found.length} tables have that name`);
+  }
+  return found[0];
+}
+
+/** Each part of a qualified name, without quotes. */
+function qualifiedName(name: string, database: DatabaseDialect): string[] {
+  return tokens(name, 0, name.length, database)
+    .filter((token) => token.text !== '.')
+    .map((token) => unquote(token.text));
+}
+
+/** The table as parseSchema reports it, its primary key read from wherever the schema declares it. */
+function tableDef(table: ReadTable, database: DatabaseDialect): TableDef {
   return {
-    name: unquote(tableName.text),
-    columns: columns.map((column): ColumnDef => {
-      const isPrimaryKey = column.primaryKey || primaryKey.has(column.name);
+    name: table.name[table.name.length - 1],
+    columns: table.columns.map((column): ColumnDef => {
+      const isPrimaryKey = column.primaryKey || table.primaryKey.has(column.name);
       const { dataType, length, isArray } = column.type;
       return {
         name: column.name,

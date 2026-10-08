@@ -270,7 +270,8 @@ npx embedoc watch
 |----------|-----------|-----------------|
 | `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column()` | `number` |
 | `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
-| `NUMERIC`, `DECIMAL`, `MONEY` | `@column()` | `string` |
+| `NUMERIC`, `DECIMAL` | `@column.decimal()` | `string` |
+| `MONEY` | `@column()` | `string` |
 | `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column()` | `number` |
 | `VARCHAR`, `TEXT`, `CHAR` | `@column()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |

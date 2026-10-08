@@ -64,8 +64,14 @@ describe('mapColumnType', () => {
   describe('exact decimals', () => {
     // litedbmodel 1.2 returns the driver's string for these; `number` would be cast only where
     // `design:type` is emitted (tsc), and left a string under esbuild (tsx / vite / vitest).
-    it.each(['numeric', 'decimal', 'money'])('%s → @column() string', (sqlType) => {
+    it.each(['numeric', 'decimal'])('%s → @column.decimal() string', (sqlType) => {
       const result = mapColumnType(col({ sqlType }));
+      expect(result.decorator).toBe('@column.decimal()');
+      expect(result.tsType).toBe('string');
+    });
+
+    it('money → @column() string', () => {
+      const result = mapColumnType(col({ sqlType: 'money' }));
       expect(result.decorator).toBe('@column()');
       expect(result.tsType).toBe('string');
     });

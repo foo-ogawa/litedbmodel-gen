@@ -37,6 +37,18 @@ describe('generateColumnCode', () => {
     expect(result).toBe('  @column.uuid({ primaryKey: true }) id?: string;');
   });
 
+  it('generates NUMERIC primary key', () => {
+    const table: TableDef = {
+      name: 'rates',
+      columns: [
+        { name: 'code', sqlType: 'numeric', isPrimaryKey: true, isNullable: false, isArray: false },
+      ],
+    };
+
+    const result = generateColumnCode(table);
+    expect(result).toBe('  @column.decimal({ primaryKey: true }) code?: string;');
+  });
+
   it('generates composite primary keys', () => {
     const table: TableDef = {
       name: 'post_tags',
