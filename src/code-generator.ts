@@ -16,9 +16,10 @@ function formatColumnLine(col: ColumnDef): string {
 function buildDecorator(col: ColumnDef, baseDecorator: string): string {
   if (!col.isPrimaryKey) return baseDecorator;
 
-  // @column.uuid() supports { primaryKey: true } options
-  if (baseDecorator.startsWith('@column.uuid(')) {
-    return '@column.uuid({ primaryKey: true })';
+  // @column.uuid() / @column.decimal() take { primaryKey: true } options
+  const family = /^@column\.(uuid|decimal)\(\)$/.exec(baseDecorator);
+  if (family) {
+    return `@column.${family[1]}({ primaryKey: true })`;
   }
 
   // For all other types, use @column({ primaryKey: true })

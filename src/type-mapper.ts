@@ -16,10 +16,10 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
 
   // Floating point / numeric
   // litedbmodel 1.2 reads an exact decimal back as the driver's string (pg `numeric`, mysql2
-  // `DECIMAL`): a bare `@column()` on a `string` property is not cast, under tsc or esbuild alike,
-  // whereas a `number` property is cast only where `design:type` is emitted.
-  'numeric': { decorator: '@column()', tsType: 'string' },
-  'decimal': { decorator: '@column()', tsType: 'string' },
+  // `DECIMAL`). `@column.decimal()` keeps it a string and declares the column numeric, so a batch
+  // write binds the string as one; a bare `@column()` leaves the batch write a `text[]`.
+  'numeric': { decorator: '@column.decimal()', tsType: 'string' },
+  'decimal': { decorator: '@column.decimal()', tsType: 'string' },
   'real': { decorator: '@column()', tsType: 'number' },
   'float': { decorator: '@column()', tsType: 'number' },
   'float4': { decorator: '@column()', tsType: 'number' },
