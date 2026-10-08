@@ -57,7 +57,8 @@ export async function commandImplement(
         'Example: litedbmodel-gen implement "Sync order items from API"',
     };
     process.stderr.write(JSON.stringify(err, null, 2) + "\n");
-    process.exit(3);
+    process.exitCode = 3;
+    return;
   }
 
   const cwd = process.cwd();
@@ -118,11 +119,13 @@ export async function commandImplement(
     if (exitCode === EXIT_RUNTIME_MISSING || exitCode === EXIT_ADAPTER_ERROR) {
       const payload = { error: "agent_error", exitCode, message: e.message ?? String(err) };
       process.stderr.write(JSON.stringify(payload, null, 2) + "\n");
-      process.exit(exitCode);
+      process.exitCode = exitCode;
+      return;
     }
 
     process.stderr.write(`Error: ${e.message ?? String(err)}\n`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Format output.
@@ -145,5 +148,7 @@ export async function commandImplement(
     process.stdout.write(output + "\n");
   }
 
-  process.exit(computeExitCode(result, agentOpts));
+  // Only the exit code is set. process.exit() drops whatever of the report stdout has not yet written
+  // to a pipe, cutting a report longer than the pipe's buffer short for whoever reads it.
+  process.exitCode = computeExitCode(result, agentOpts);
 }
