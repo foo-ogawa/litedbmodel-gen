@@ -30,8 +30,9 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
 
   // Fixed-precision decimals read back as their EXACT decimal STRING: a JS number rounds past 2^53,
   // and `NUMERIC(38,10)` is measurably destroyed by it (spec: DECIMAL / NUMERIC / MONEY → string).
-  'numeric': { decorator: '@column.text()', tsType: 'string' },
-  'decimal': { decorator: '@column.text()', tsType: 'string' },
+  // `@column.decimal()` declares the column numeric, so a batch write binds the string as one.
+  'numeric': { decorator: '@column.decimal()', tsType: 'string' },
+  'decimal': { decorator: '@column.decimal()', tsType: 'string' },
 
   // Floating point — inexact by definition, so a JS number loses nothing the column had
   'real': { decorator: '@column.number()', tsType: 'number' },

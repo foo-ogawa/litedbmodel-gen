@@ -84,6 +84,16 @@ describe('litedbmodel-gen implement', () => {
     expect(parsed.prompt).toContain('models/**/*.ts');
   });
 
+  it('show-prompt output longer than a pipe takes at once reaches the reader whole', () => {
+    // ~96 KB: past what a pipe takes in one write (8 KB to a Node 20 reader, 64 KB to Node 22 on macOS).
+    const description = 'Add findByEmail method. '.repeat(4000).trim();
+    const result = run(`implement "${description}" --show-prompt`);
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.prompt).toContain(description);
+  });
+
   it('show-prompt prompt includes --target when specified', () => {
     const result = run(
       'implement "Add findByEmail" --target src/services/user.service.ts --show-prompt',

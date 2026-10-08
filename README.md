@@ -274,7 +274,8 @@ checked i64 — and a date/timestamp as the column's own textual string (never a
 |----------|-----------|-----------------|
 | `INTEGER`, `INT`, `SMALLINT`, `SERIAL` | `@column.bigint()` | **`bigint`** (behavior-contracts' one integer type) |
 | `BIGINT`, `BIGSERIAL` | `@column.bigint()` | `bigint` |
-| `NUMERIC`, `DECIMAL`, `MONEY` | `@column.text()` | **`string`** (exact — a JS number destroys `NUMERIC(38,10)`) |
+| `NUMERIC`, `DECIMAL` | `@column.decimal()` | **`string`** (exact — a JS number destroys `NUMERIC(38,10)`) |
+| `MONEY` | `@column.text()` | `string` |
 | `REAL`, `FLOAT`, `DOUBLE PRECISION` | `@column.number()` | `number` |
 | `VARCHAR`, `TEXT`, `CHAR` | `@column.text()` | `string` |
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
