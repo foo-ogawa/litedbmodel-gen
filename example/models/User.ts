@@ -10,7 +10,7 @@ class UserModel extends DBModel {
   @column.boolean() is_active?: boolean | null;
   @column.text() role?: string;
   @column.stringArray() tags?: string[] | null;
-  @column.json<Record<string, unknown>>() metadata?: Record<string, unknown> | null;
+  @column.json<unknown>() metadata?: unknown;
   @column.datetime() created_at?: string;
   @column.datetime() updated_at?: string;
   /*@embedoc:end*/

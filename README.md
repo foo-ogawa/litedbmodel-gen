@@ -280,7 +280,7 @@ checked i64 — and a date/timestamp as the column's own textual string (never a
 | `BOOLEAN` | `@column.boolean()` | `boolean` |
 | `TIMESTAMP`, `TIMESTAMPTZ`, `DATETIME` | `@column.datetime()` | `string` |
 | `DATE` | `@column.date()` | `string` |
-| `JSON`, `JSONB` | `@column.json<Record<string, unknown>>()` | `Record<string, unknown>` |
+| `JSON`, `JSONB` | `@column.json<unknown>()` | `unknown` (any JSON value — an array or an object; decode it at the read boundary) |
 | `UUID` | `@column.uuid()` | `string` |
 | `BYTEA`, `BLOB` | `@column.passthrough()` | `unknown` |
 
