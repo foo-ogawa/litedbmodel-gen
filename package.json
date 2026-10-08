@@ -52,7 +52,7 @@
   },
   "peerDependencies": {
     "embedoc": ">=0.11.0",
-    "litedbmodel": "^1.2.12"
+    "litedbmodel": "^1.2.13"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

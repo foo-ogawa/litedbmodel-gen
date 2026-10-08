@@ -13,16 +13,11 @@ function formatColumnLine(col: ColumnDef): string {
   return `  ${decorator} ${col.name}?: ${mapping.tsType}${nullSuffix};`;
 }
 
+/**
+ * Carry the column's OPTIONS into the decorator the type mapping picked: every `@column.*` family
+ * takes the same `ColumnOptions` the bare `@column()` does, so a primary key keeps its type conversion.
+ */
 function buildDecorator(col: ColumnDef, baseDecorator: string): string {
   if (!col.isPrimaryKey) return baseDecorator;
-
-  // @column.uuid() / @column.decimal() take { primaryKey: true } options
-  const family = /^@column\.(uuid|decimal)\(\)$/.exec(baseDecorator);
-  if (family) {
-    return `@column.${family[1]}({ primaryKey: true })`;
-  }
-
-  // For all other types, use @column({ primaryKey: true })
-  // litedbmodel auto-infers number/string/boolean/Date/bigint from TS types
-  return '@column({ primaryKey: true })';
+  return baseDecorator.replace(/\(\)$/, '({ primaryKey: true })');
 }
