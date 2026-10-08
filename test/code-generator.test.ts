@@ -49,6 +49,23 @@ describe('generateColumnCode', () => {
     expect(result).toBe('  @column.decimal({ primaryKey: true }) code?: string;');
   });
 
+  it('keeps the family of a DATE / BIGINT primary key', () => {
+    const table: TableDef = {
+      name: 'daily_nutrient_summaries',
+      columns: [
+        { name: 'user_id', sqlType: 'uuid', isPrimaryKey: true, isNullable: false, isArray: false },
+        { name: 'date', sqlType: 'date', isPrimaryKey: true, isNullable: false, isArray: false },
+        { name: 'id', sqlType: 'bigint', isPrimaryKey: true, isNullable: false, isArray: false },
+      ],
+    };
+
+    expect(generateColumnCode(table).split('\n')).toEqual([
+      '  @column.uuid({ primaryKey: true }) user_id?: string;',
+      '  @column.date({ primaryKey: true }) date?: string;',
+      '  @column.bigint({ primaryKey: true }) id?: bigint;',
+    ]);
+  });
+
   it('generates composite primary keys', () => {
     const table: TableDef = {
       name: 'post_tags',
