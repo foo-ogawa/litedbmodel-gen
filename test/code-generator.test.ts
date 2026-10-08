@@ -83,7 +83,7 @@ describe('generateColumnCode', () => {
     const result = generateColumnCode(table);
     const lines = result.split('\n');
 
-    expect(lines[0]).toBe('  @column.json<Record<string, unknown>>() metadata?: Record<string, unknown> | null;');
+    expect(lines[0]).toBe('  @column.json<unknown>() metadata?: unknown;');
     expect(lines[1]).toBe('  @column.bigint() big_id?: bigint;');
   });
 });

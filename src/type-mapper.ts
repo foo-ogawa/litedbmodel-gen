@@ -66,9 +66,10 @@ const TYPE_MAP: Record<string, ColumnMapping> = {
   'datetime': { decorator: '@column.datetime()', tsType: 'string' },
   'date': { decorator: '@column.date()', tsType: 'string' },
 
-  // JSON
-  'json': { decorator: '@column.json<Record<string, unknown>>()', tsType: 'Record<string, unknown>' },
-  'jsonb': { decorator: '@column.json<Record<string, unknown>>()', tsType: 'Record<string, unknown>' },
+  // JSON — the column holds any JSON value (an array as readily as an object), so it reads back as
+  // `unknown`: the caller decodes it to its own shape at the read boundary and writes any JSON value
+  'json': { decorator: '@column.json<unknown>()', tsType: 'unknown' },
+  'jsonb': { decorator: '@column.json<unknown>()', tsType: 'unknown' },
 
   // UUID
   'uuid': { decorator: '@column.uuid()', tsType: 'string' },
