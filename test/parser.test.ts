@@ -542,6 +542,56 @@ describe('parseSchema - a table node-sql-parser rejects is read like any other',
     ]);
   });
 
+  it('reads the PRIMARY KEY an ALTER TABLE adds, as pg_dump writes every one', () => {
+    const tables = parseSchema(`
+      CREATE TABLE public.users (id uuid NOT NULL, name text NOT NULL);
+      CREATE TABLE public.follows (follower_id uuid, followee_id uuid, at timestamp);
+      CREATE TABLE public.events (id bigint, ts date) PARTITION BY RANGE (ts);
+      CREATE TABLE public.events_2026 PARTITION OF public.events FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+      ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT gen_random_uuid();
+      ALTER TABLE ONLY public.users
+          ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+      ALTER TABLE ONLY public.follows
+          ADD CONSTRAINT follows_pkey PRIMARY KEY (follower_id, followee_id);
+      ALTER TABLE ONLY public.events
+          ADD CONSTRAINT events_pkey PRIMARY KEY (id, ts);
+      ALTER TABLE ONLY public.events_2026
+          ADD CONSTRAINT events_2026_pkey PRIMARY KEY (id, ts);
+      ALTER TABLE ONLY public.users
+          ADD CONSTRAINT users_name_key UNIQUE (name);
+    `);
+    expect(tables.map((t) => [t.name, t.columns.map((c) => [c.name, c.isPrimaryKey, c.isNullable])])).toEqual([
+      ['users', [['id', true, false], ['name', false, false]]],
+      ['follows', [['follower_id', true, false], ['followee_id', true, false], ['at', false, true]]],
+      ['events', [['id', true, false], ['ts', true, false]]],
+    ]);
+  });
+
+  it('reads the PRIMARY KEY among the other actions of an ALTER TABLE, naming its table in any case, with or without its schema', () => {
+    const keys = (sql: string, database: 'PostgreSQL' | 'MySQL' = 'PostgreSQL') =>
+      parseSchema(sql, { database }).map((t) => t.columns.filter((c) => c.isPrimaryKey).map((c) => c.name));
+    expect(
+      keys('CREATE TABLE `users` (`id` int NOT NULL, `e` varchar(9));\nALTER TABLE `users`\n  ADD PRIMARY KEY (`id`),\n  ADD UNIQUE KEY `e` (`e`);', 'MySQL'),
+    ).toEqual([['id']]);
+    expect(
+      keys('CREATE TABLE t (a int, b int); ALTER TABLE IF EXISTS ONLY public.t * ADD CONSTRAINT c CHECK (a > 0), ADD CONSTRAINT p PRIMARY KEY (a, b);'),
+    ).toEqual([['a', 'b']]);
+    expect(keys('CREATE TABLE "Users" (id int); ALTER TABLE users ADD PRIMARY KEY (id);')).toEqual([['id']]);
+    expect(keys('CREATE TABLE a.u (id int); CREATE TABLE b.u (id int); ALTER TABLE ONLY b.u ADD CONSTRAINT p PRIMARY KEY (id);')).toEqual([
+      [],
+      ['id'],
+    ]);
+  });
+
+  it('throws rather than drop a PRIMARY KEY an ALTER TABLE adds that it cannot place', () => {
+    expect(() => parseSchema('CREATE TABLE a.u (id int); CREATE TABLE b.u (id int); ALTER TABLE u ADD PRIMARY KEY (id);')).toThrow(
+      /Cannot tell which table ALTER TABLE u names/,
+    );
+    expect(() => parseSchema('CREATE TABLE t (id int); ALTER TABLE t ADD CONSTRAINT p PRIMARY KEY USING INDEX i;')).toThrow(
+      /Cannot parse the ALTER TABLE of t: its PRIMARY KEY lists no columns/,
+    );
+  });
+
   it('throws, naming the table, when its columns are not all listed in it', () => {
     expect(() => parseSchema('CREATE TABLE c (LIKE p INCLUDING ALL, x int);')).toThrow(/Cannot parse the table c: LIKE/);
     expect(() => parseSchema('CREATE TABLE c (x int) INHERITS (p);')).toThrow(/Cannot parse the table c: INHERITS/);
