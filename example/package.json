@@ -9,16 +9,13 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "embedoc": "^0.14.9",
+    "embedoc": "^0.14.10",
     "litedbmodel": "^2.2.14",
     "litedbmodel-gen": "file:..",
     "reflect-metadata": "^0.2.2",
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "js-yaml": "^4.3.2",
-    "embedoc": {
-      "glob": "^14.0.6"
-    }
+    "js-yaml": "^4.3.2"
   }
 }
