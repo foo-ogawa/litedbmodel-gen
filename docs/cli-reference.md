@@ -2,7 +2,7 @@
 
 embedoc-based model code generator for litedbmodel. Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates TypeScript column definitions that stay in sync with your schema.
 
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 ## Table of Contents
 
