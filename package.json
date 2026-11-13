@@ -1,6 +1,6 @@
 {
   "name": "litedbmodel-gen",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "embedoc-based model code generator for litedbmodel — generates TypeScript column definitions from SQL DDL (PostgreSQL/MySQL/SQLite)",
   "type": "module",
   "main": "dist/index.js",
@@ -48,7 +48,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.10.0"
+    "better-sqlite3": "^12.11.1"
   },
   "peerDependencies": {
     "embedoc": ">=0.11.0",
@@ -56,23 +56,26 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.9.2",
-    "agent-contracts": "^0.34.11",
-    "agent-contracts-runtime": "^0.36.4",
-    "cli-contracts": "^0.34.10",
+    "@types/node": "^26.6.6",
+    "agent-contracts": "^0.34.14",
+    "agent-contracts-runtime": "^0.36.15",
+    "cli-contracts": "^0.34.12",
     "commander": "^14.0.3",
-    "embedoc": "^0.14.8",
-    "esbuild": "^0.28.1",
+    "embedoc": "^0.14.9",
+    "esbuild": "^0.28.2",
     "js-yaml": "^4.3.2",
     "node-sql-parser": "^5.4.0",
-    "tsup": "^8.5.1",
+    "tsup": "^9.0.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11",
-    "zod": "^4.4.3"
+    "vitest": "^4.1.12",
+    "zod": "^4.6.7"
   },
   "overrides": {
     "js-yaml": "^4.3.2",
     "csv-parse": "^7.0.2",
-    "esbuild": "$esbuild"
+    "esbuild": "$esbuild",
+    "embedoc": {
+      "glob": "^14.0.6"
+    }
   }
 }

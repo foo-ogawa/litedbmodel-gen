@@ -97,6 +97,7 @@ export function createProgram(
     .argument("[commands...]", "Command IDs to extract. Use dot notation.")
     .option("-a, --all", "Extract all commands.", false)
     .option("--include-meta", "Include extraction metadata.", true)
+    .option("--no-include-meta")
     .option("-F, --format <format>", "Output format (yaml or json).", "yaml")
     .action(async (commands: string[], opts: { all?: boolean; includeMeta?: boolean; format?: string }) => {
       if (commands.length === 0 && !opts.all) {
