@@ -16,6 +16,9 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "js-yaml": "^4.3.2"
+    "js-yaml": "^4.3.2",
+    "embedoc": {
+      "glob": "^14.0.6"
+    }
   }
 }
