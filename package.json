@@ -33,7 +33,8 @@
     "prepublishOnly": "npm run build && npm run bundle:min && npm run test:ci",
     "cli:generate": "cli-contracts generate",
     "dsl:generate": "agent-runtime generate --config dsl/agent-runtime.config.yaml",
-    "test:ci": "vitest run"
+    "test:ci": "vitest run",
+    "audit:signatures": "npx --yes npm@11.19.1 audit signatures"
   },
   "keywords": [
     "litedbmodel",
