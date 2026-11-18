@@ -26,10 +26,25 @@ jobs:
             sleep 10
           done
           exit 1
-      - name: Audit
+      - name: Audit (production dependencies)
         # EVERY lockfile the repo tracks, not just the root: `example/package-lock.json` pinned
         # vulnerable versions for months because nothing audited it (#48). The root is audited as
         # installed; the rest are read from disk, since a nested tree has no node_modules here.
+        # Blocking audit scoped to what a consumer installs: an advisory in a runtime
+        # dependency reaches every user of the published package.
+        run: |
+          status=0
+          npm audit --omit=dev --audit-level=moderate || status=1
+          for lock in $(git ls-files '*/package-lock.json'); do
+            echo "::group::npm audit --omit=dev $(dirname "$lock")"
+            ( cd "$(dirname "$lock")" && npm audit --package-lock-only --omit=dev --audit-level=moderate ) || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+      - name: Audit including dev dependencies (report only)
+        # Non-blocking visibility for the dev toolchain, which runs only in CI and on a
+        # developer's machine. Same set of trees as the blocking step above, same reason.
+        continue-on-error: true
         run: |
           status=0
           npm audit --audit-level=moderate || status=1
