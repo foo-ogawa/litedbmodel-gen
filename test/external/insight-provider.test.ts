@@ -96,6 +96,28 @@ describe('LitedbmodelGenInsightProvider', () => {
     expect(userAnchor!.symbolIds).toContain('models/User.ts#User');
     expect(userAnchor!.symbols?.[0]?.symbolId).toBe('models/User.ts#User');
   });
+
+  it('names a model by the datasource model_classes, as generate does', () => {
+    const dir = createTempProject({
+      'db/schema.sql': 'CREATE TABLE invitation_code_uses (id integer PRIMARY KEY);\n',
+      'embedoc.config.yaml': `
+datasources:
+  schema:
+    type: sql_schema
+    path: "./db/schema.sql"
+    database: PostgreSQL
+    model_classes:
+      invitation_code_uses: InvitationCodeUse
+    generators:
+      - output_path: "./models/{model_class}.ts"
+`,
+    });
+
+    const insight = buildExternalInsight(dir);
+    expect(insight.edges.map(e => e.to)).toEqual(['models/InvitationCodeUse.ts']);
+    expect(insight.anchorMapping?.find(a => a.domainId === 'models/InvitationCodeUse.ts')?.symbolIds)
+      .toContain('models/InvitationCodeUse.ts#InvitationCodeUse');
+  });
 });
 
 describe('buildExternalInsight error handling', () => {

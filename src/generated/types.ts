@@ -16,7 +16,7 @@ export interface AuditArgs {
 }
 
 export interface AuditOptions {
-  adapter?: "mock" | "claude" | "openai" | "gemini";
+  adapter?: "mock" | "claude" | "openai";
   model?: string;
   showPrompt?: boolean;
   failOn?: "warning" | "error" | "critical";
@@ -42,7 +42,7 @@ export interface ImplementArgs {
 export interface ImplementOptions {
   target?: string;
   models?: string;
-  adapter?: "mock" | "claude" | "openai" | "gemini";
+  adapter?: "mock" | "claude" | "openai";
   model?: string;
   showPrompt?: boolean;
   failOn?: "warning" | "error" | "critical";

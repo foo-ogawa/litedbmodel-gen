@@ -22,7 +22,7 @@ describe("bundle-isolation", () => {
       JSON.stringify({ name: "bundle-test", version: "1.0.0", type: "module" }),
     );
 
-    execSync("npm install @openai/agents better-sqlite3 --legacy-peer-deps", {
+    execSync("npm install @openai/agents --legacy-peer-deps", {
       cwd: tempDir,
       stdio: "pipe",
     });

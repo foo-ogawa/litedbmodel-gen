@@ -15,6 +15,7 @@ import {
   handoffSchemas,
 } from "../generated/dsl/index.js";
 import type { AgentConfig, AgentOptions, AgentRunResult, AgentResultData, TaskId } from "./types.js";
+import type { TaskOutcome } from "agent-contracts-runtime";
 
 export const EXIT_RUNTIME_MISSING = 11;
 export const EXIT_ADAPTER_ERROR = 12;
@@ -118,63 +119,33 @@ export async function runAgentTask(
     throw Object.assign(err as Error, { exitCode: EXIT_ADAPTER_ERROR });
   }
 
-  const { outcome, follow_ups_used, retries_used } = result;
-
-  // Map TaskOutcome → AgentRunResult.
-  if (outcome.data !== undefined) {
-    // success
-    return {
-      taskId,
-      data: outcome.data as AgentResultData,
-      raw: outcome.raw ?? "",
-      prompt: userRequest,
-      showPrompt: false,
-      status: "success",
-      followUpsUsed: follow_ups_used,
-      retriesUsed: retries_used,
-    };
-  }
-
-  if (Array.isArray(outcome.errors)) {
-    // validation_error
-    return {
-      taskId,
-      data: null,
-      raw: outcome.raw ?? "",
-      prompt: userRequest,
-      showPrompt: false,
-      status: "validation_error",
-      errorMessage: outcome.errors.join("; "),
-      followUpsUsed: follow_ups_used,
-      retriesUsed: retries_used,
-    };
-  }
-
-  if (typeof outcome.reason === "string") {
-    // escalation
-    return {
-      taskId,
-      data: null,
-      raw: outcome.raw ?? "",
-      prompt: userRequest,
-      showPrompt: false,
-      status: "escalation",
-      errorMessage: outcome.reason,
-      followUpsUsed: follow_ups_used,
-      retriesUsed: retries_used,
-    };
-  }
-
-  // error
-  return {
+  const { follow_ups_used, retries_used } = result;
+  const outcome = result.outcome as TaskOutcome;
+  const base = {
     taskId,
     data: null,
-    raw: "",
     prompt: userRequest,
     showPrompt: false,
-    status: "error",
-    errorMessage: typeof outcome.message === "string" ? outcome.message : "Unknown agent error",
     followUpsUsed: follow_ups_used,
     retriesUsed: retries_used,
   };
+
+  // Map TaskOutcome → AgentRunResult.
+  switch (outcome.status) {
+    case "success":
+      return { ...base, data: outcome.data as AgentResultData, raw: outcome.raw, status: "success" };
+    case "validation_error":
+      return {
+        ...base,
+        raw: outcome.raw,
+        status: "validation_error",
+        errorMessage: outcome.errors.issues
+          .map((issue) => (issue.path.length ? `${issue.path.join(".")}: ${issue.message}` : issue.message))
+          .join("; "),
+      };
+    case "escalation":
+      return { ...base, raw: outcome.raw, status: "escalation", errorMessage: outcome.reason };
+    case "error":
+      return { ...base, raw: "", status: "error", errorMessage: outcome.message };
+  }
 }

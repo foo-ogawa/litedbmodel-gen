@@ -52,6 +52,7 @@ const handlers: CommandHandlers = {
       failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
       output:       opts.output as string | undefined,
       reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
+      logFile:      opts.logFile as string | undefined,
     });
   },
 
@@ -66,6 +67,7 @@ const handlers: CommandHandlers = {
       failOn:       opts.failOn as 'warning' | 'error' | 'critical' | undefined,
       output:       opts.output as string | undefined,
       reportFormat: opts.reportFormat as 'json' | 'text' | 'yaml' | undefined,
+      logFile:      opts.logFile as string | undefined,
     });
   },
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync, type ExecSyncOptionsWithStringEncoding } from 'child_process';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -147,6 +147,16 @@ describe('litedbmodel-gen implement', () => {
 
     const parsed = JSON.parse(result.stdout);
     expect(parsed.metadata).toBeDefined();
+  });
+
+  it('--log-file creates the progress log', () => {
+    const logFile = join(TMP_DIR, 'progress.log');
+    rmSync(logFile, { force: true });
+    const result = run(
+      `implement "Add findByEmail" --target src/services/user.service.ts --log-file ${logFile}`,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(logFile)).toBe(true);
   });
 
   // ── output formats ─────────────────────────────────────

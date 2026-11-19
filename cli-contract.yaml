@@ -3,7 +3,7 @@ cli_contracts: 0.1.0
 
 info:
   title: litedbmodel-gen CLI
-  version: 1.0.7
+  version: 1.0.8
   description: >-
     embedoc-based model code generator for litedbmodel.
     Parses SQL DDL (PostgreSQL / MySQL / SQLite) and generates
@@ -142,7 +142,7 @@ command_sets:
             description: LLM adapter to use for the audit.
             schema:
               type: string
-              enum: [mock, claude, openai, gemini]
+              enum: [mock, claude, openai]
               default: mock
 
           - name: model
@@ -294,7 +294,7 @@ command_sets:
             description: LLM adapter to use for code generation.
             schema:
               type: string
-              enum: [mock, claude, openai, gemini]
+              enum: [mock, claude, openai]
               default: mock
 
           - name: model

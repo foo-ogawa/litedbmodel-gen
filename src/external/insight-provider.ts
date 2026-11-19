@@ -47,6 +47,7 @@ interface DatasourceConfig {
   path?: string;
   database?: string;
   generators?: GeneratorConfig[];
+  model_classes?: Record<string, string>;
 }
 
 interface EmbedocConfig {
@@ -163,7 +164,7 @@ function collectDatasourceInsights(
   upsertAnchor(anchors, schemaRel, schemaRel);
 
   for (const table of tables) {
-    const modelClass = tableNameToModelClass(table.name);
+    const modelClass = tableNameToModelClass(table.name, datasource.model_classes);
 
     for (const generator of generators) {
       const outputPattern = generator.output_path!;
