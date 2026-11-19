@@ -48,9 +48,6 @@
     "schema"
   ],
   "license": "MIT",
-  "dependencies": {
-    "better-sqlite3": "^12.11.1"
-  },
   "peerDependencies": {
     "embedoc": ">=0.14.10",
     "litedbmodel": "^2.2.8"
@@ -58,7 +55,6 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.6",
-    "agent-contracts": "^0.34.14",
     "agent-contracts-runtime": "^0.36.15",
     "cli-contracts": "^0.34.12",
     "commander": "^14.0.3",
@@ -72,8 +68,6 @@
     "zod": "^4.6.7"
   },
   "overrides": {
-    "js-yaml": "^4.3.2",
-    "csv-parse": "^7.0.2",
     "esbuild": "$esbuild"
   }
 }
