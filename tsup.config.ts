@@ -3,7 +3,6 @@ import { defineConfig } from 'tsup';
 const sdkExternals = [
   '@anthropic-ai/claude-agent-sdk',
   '@openai/agents',
-  '@google/adk',
 ];
 
 export default defineConfig([

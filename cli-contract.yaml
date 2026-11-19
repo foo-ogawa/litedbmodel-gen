@@ -142,7 +142,7 @@ command_sets:
             description: LLM adapter to use for the audit.
             schema:
               type: string
-              enum: [mock, claude, openai, gemini]
+              enum: [mock, claude, openai]
               default: mock
 
           - name: model
@@ -294,7 +294,7 @@ command_sets:
             description: LLM adapter to use for code generation.
             schema:
               type: string
-              enum: [mock, claude, openai, gemini]
+              enum: [mock, claude, openai]
               default: mock
 
           - name: model

@@ -10,7 +10,6 @@ const externalPackages = [
   "@anthropic-ai/claude-agent-sdk",
   "@anthropic-ai/sdk",
   "@openai/agents",
-  "@google/adk",
   // Peer dependencies
   "embedoc",
 ];
