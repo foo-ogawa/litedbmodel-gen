@@ -119,6 +119,22 @@ describe('sqlSchema datasource', () => {
     expect(all.map(r => (r as Record<string, unknown>)['model_class'])).toEqual(['InvitationCodeUse', 'CampaignStatus']);
   });
 
+  it('refuses a table whose model class would not be an identifier, unless model_classes names it', async () => {
+    const schemaPath = join(TMP_DIR, 'odd-names.sql');
+    for (const name of ['../../outside', 'my table', 'order-items', '2fa_codes']) {
+      writeFileSync(schemaPath, `CREATE TABLE "${name}" (id SERIAL PRIMARY KEY);`);
+      await expect(sqlSchema.create({ type: 'sql_schema', path: schemaPath, database: 'PostgreSQL' }))
+        .rejects.toThrow(/is not a TypeScript identifier/);
+      await expect(sqlSchema.create({ type: 'sql_schema', path: schemaPath, database: 'PostgreSQL', model_classes: { [name]: '../x' } }))
+        .rejects.toThrow(/is not a TypeScript identifier/);
+
+      const ds = await sqlSchema.create({ type: 'sql_schema', path: schemaPath, database: 'PostgreSQL', model_classes: { [name]: 'Named' } });
+      const all = await ds.getAll();
+      expect(all.map(r => (r as Record<string, unknown>)['model_class'])).toEqual(['Named']);
+      expect(all.map(r => (r as Record<string, unknown>)['table_name'])).toEqual([name]);
+    }
+  });
+
   it('works with MySQL dialect', async () => {
     const schemaPath = join(TMP_DIR, 'mysql_schema.sql');
     writeFileSync(schemaPath, `

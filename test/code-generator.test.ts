@@ -86,4 +86,27 @@ describe('generateColumnCode', () => {
     expect(lines[0]).toBe('  @column.json<unknown>() metadata?: unknown;');
     expect(lines[1]).toBe('  @column.bigint() big_id?: bigint;');
   });
+
+  it('writes a column name that is not an identifier as a string literal property', () => {
+    const table: TableDef = {
+      name: 'odd',
+      columns: [
+        { name: 'first name', sqlType: 'text', isPrimaryKey: false, isNullable: true, isArray: false },
+        { name: 'order-id', sqlType: 'integer', isPrimaryKey: false, isNullable: false, isArray: false },
+        { name: '1st', sqlType: 'text', isPrimaryKey: false, isNullable: false, isArray: false },
+        { name: 'x; static { globalThis.probe = 1 } y', sqlType: 'text', isPrimaryKey: false, isNullable: false, isArray: false },
+        { name: 'a"b\\c', sqlType: 'text', isPrimaryKey: false, isNullable: false, isArray: false },
+        { name: 'ユーザー名', sqlType: 'text', isPrimaryKey: false, isNullable: false, isArray: false },
+      ],
+    };
+
+    const lines = generateColumnCode(table).split('\n');
+
+    expect(lines[0]).toBe('  @column.text() "first name"?: string | null;');
+    expect(lines[1]).toBe('  @column.bigint() "order-id"?: bigint;');
+    expect(lines[2]).toBe('  @column.text() "1st"?: string;');
+    expect(lines[3]).toBe('  @column.text() "x; static { globalThis.probe = 1 } y"?: string;');
+    expect(lines[4]).toBe('  @column.text() "a\\"b\\\\c"?: string;');
+    expect(lines[5]).toBe('  @column.text() ユーザー名?: string;');
+  });
 });

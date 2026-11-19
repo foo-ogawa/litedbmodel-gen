@@ -1,5 +1,6 @@
 import type { TableDef, ColumnDef } from './types.js';
 import { mapColumnType } from './type-mapper.js';
+import { isIdentifier } from './naming.js';
 
 export function generateColumnCode(table: TableDef): string {
   const lines = table.columns.map(col => formatColumnLine(col));
@@ -11,7 +12,16 @@ function formatColumnLine(col: ColumnDef): string {
   const decorator = buildDecorator(col, mapping.decorator);
   // `unknown` already admits null, so `unknown | null` is the same type spelled twice.
   const nullSuffix = col.isNullable && !col.isPrimaryKey && mapping.tsType !== 'unknown' ? ' | null' : '';
-  return `  ${decorator} ${col.name}?: ${mapping.tsType}${nullSuffix};`;
+  return `  ${decorator} ${propertyName(col.name)}?: ${mapping.tsType}${nullSuffix};`;
+}
+
+/**
+ * The column's name as a property name. A quoted column may be named anything (`"first name"`), so a
+ * name that is not an identifier is written as a string literal; litedbmodel takes the property name
+ * as the column name either way.
+ */
+function propertyName(name: string): string {
+  return isIdentifier(name) ? name : JSON.stringify(name);
 }
 
 /**
