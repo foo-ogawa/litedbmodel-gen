@@ -48,6 +48,10 @@
     "schema"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foo-ogawa/litedbmodel-gen.git"
+  },
   "peerDependencies": {
     "embedoc": ">=0.14.10",
     "litedbmodel": "^2.2.8"
