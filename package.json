@@ -48,6 +48,10 @@
     "schema"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foo-ogawa/litedbmodel-gen.git"
+  },
   "dependencies": {
     "better-sqlite3": "^12.10.0"
   },
